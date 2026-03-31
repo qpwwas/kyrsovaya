@@ -1,0 +1,104 @@
+:root {
+  --bg: #f3efe4;
+  --bg-strong: #efe7d0;
+  --panel: rgba(255, 253, 246, 0.88);
+  --panel-strong: #fffaf0;
+  --ink: #14363c;
+  --muted: #567278;
+  --line: rgba(20, 54, 60, 0.14);
+  --accent: #0f766e;
+  --accent-strong: #115e59;
+  --accent-soft: rgba(15, 118, 110, 0.12);
+  --warning: #ea580c;
+  --warning-soft: rgba(234, 88, 12, 0.12);
+  --danger: #b42318;
+  --danger-soft: rgba(180, 35, 24, 0.12);
+  --success: #2d7a46;
+  --success-soft: rgba(45, 122, 70, 0.12);
+  --shadow: 0 24px 60px rgba(18, 41, 43, 0.14);
+  --radius-xl: 28px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --content-width: 1240px;
+  --font-body: 'Trebuchet MS', 'Gill Sans', sans-serif;
+  --font-heading: 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  --font-mono: 'Consolas', 'Courier New', monospace;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.15), transparent 35%),
+    radial-gradient(circle at top right, rgba(234, 88, 12, 0.12), transparent 32%),
+    linear-gradient(180deg, #f8f5ee 0%, var(--bg) 52%, #ede6d6 100%);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(20, 54, 60, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 54, 60, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+#root {
+  min-height: 100vh;
+  position: relative;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-heading);
+  line-height: 1.08;
+}
+
+p {
+  margin: 0;
+}
+
+code {
+  font-family: var(--font-mono);
+}
