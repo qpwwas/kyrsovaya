@@ -1,83 +1,176 @@
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { LoginFormCard } from '../components/auth/LoginFormCard'
 import { PageHeader } from '../components/PageHeader'
+import { Reveal } from '../components/Reveal'
 import { StatusPill } from '../components/StatusPill'
 import { useAppState } from '../context/useAppState'
 import { roleLabels } from '../utils/format'
 
-function getQuickActions(isAuthenticated, currentRole) {
-  if (!isAuthenticated) {
-    return [
-      {
-        to: '/login',
-        title: 'Вход в систему',
-        description: 'Отдельная страница авторизации для всех ролей.',
-      },
-      {
-        to: '/register',
-        title: 'Регистрация',
-        description: 'Создание аккаунта спортсмена или родителя.',
-      },
-      {
-        to: '/sections',
-        title: 'Каталог секций',
-        description: 'Просмотр направлений, тренеров и свободных мест.',
-      },
-      {
-        to: '/schedule',
-        title: 'Расписание',
-        description: 'Ближайшие тренировки, залы и время проведения.',
-      },
-    ]
-  }
+const sportCards = [
+  {
+    title: 'Футбол',
+    subtitle: 'Junior Pro',
+    status: 'Открыт набор',
+    tone: 'success',
+    meta: '18 мест · Игровой зал',
+  },
+  {
+    title: 'Плавание',
+    subtitle: 'Sprint Team',
+    status: 'Почти заполнено',
+    tone: 'warning',
+    meta: '16 мест · Бассейн 1',
+  },
+  {
+    title: 'Баскетбол',
+    subtitle: 'U16 Core',
+    status: 'Открыт набор',
+    tone: 'success',
+    meta: '20 мест · Игровой зал',
+  },
+  {
+    title: 'Гимнастика',
+    subtitle: 'Flex Kids',
+    status: 'Последние места',
+    tone: 'info',
+    meta: '12 мест · Малый зал',
+  },
+  {
+    title: 'Тхэквондо',
+    subtitle: 'Start Group',
+    status: 'Открыт набор',
+    tone: 'success',
+    meta: '14 мест · Зал единоборств',
+  },
+  {
+    title: 'Лёгкая атлетика',
+    subtitle: 'Track Lab',
+    status: 'Набор скоро',
+    tone: 'neutral',
+    meta: 'Новый поток · Стадион',
+  },
+]
 
-  const commonActions = [
-    {
-      to: '/profile',
-      title: 'Личный кабинет',
-      description: 'Редактирование профиля и контактных данных.',
-    },
-    {
-      to: '/sections',
-      title: 'Секции',
-      description: 'Просмотр спортивных направлений и запись.',
-    },
-    {
-      to: '/schedule',
-      title: 'Расписание',
-      description: 'Контроль тренировок и занятости залов.',
-    },
-  ]
+const scheduleTabs = [
+  {
+    key: 'mon',
+    label: 'Пн',
+    items: [
+      { time: '17:00', section: 'Гимнастика Kids', hall: 'Малый зал', coach: 'Н. Колесова' },
+      { time: '18:30', section: 'Плавание PRO', hall: 'Бассейн 1', coach: 'И. Лапина' },
+      { time: '20:00', section: 'Футбол Junior', hall: 'Игровой зал', coach: 'А. Новиков' },
+    ],
+  },
+  {
+    key: 'tue',
+    label: 'Вт',
+    items: [
+      { time: '16:30', section: 'Тхэквондо Start', hall: 'Зал единоборств', coach: 'Д. Сейтханов' },
+      { time: '18:00', section: 'Баскетбол U16', hall: 'Игровой зал', coach: 'Р. Гусев' },
+      { time: '19:30', section: 'Плавание Sprint', hall: 'Бассейн 1', coach: 'И. Лапина' },
+    ],
+  },
+  {
+    key: 'wed',
+    label: 'Ср',
+    items: [
+      { time: '17:30', section: 'Лёгкая атлетика', hall: 'Стадион', coach: 'М. Корнев' },
+      { time: '18:00', section: 'Гимнастика Flex', hall: 'Малый зал', coach: 'Н. Колесова' },
+      { time: '19:00', section: 'Футбол Junior', hall: 'Игровой зал', coach: 'А. Новиков' },
+    ],
+  },
+  {
+    key: 'thu',
+    label: 'Чт',
+    items: [
+      { time: '16:00', section: 'Плавание PRO', hall: 'Бассейн 1', coach: 'И. Лапина' },
+      { time: '18:00', section: 'Баскетбол U16', hall: 'Игровой зал', coach: 'Р. Гусев' },
+      { time: '19:30', section: 'Тхэквондо Start', hall: 'Зал единоборств', coach: 'Д. Сейтханов' },
+    ],
+  },
+  {
+    key: 'fri',
+    label: 'Пт',
+    items: [
+      { time: '17:00', section: 'Лёгкая атлетика', hall: 'Стадион', coach: 'М. Корнев' },
+      { time: '18:30', section: 'Гимнастика Kids', hall: 'Малый зал', coach: 'Н. Колесова' },
+      { time: '20:00', section: 'Футбол Junior', hall: 'Игровой зал', coach: 'А. Новиков' },
+    ],
+  },
+  {
+    key: 'sat',
+    label: 'Сб',
+    items: [
+      { time: '10:00', section: 'Плавание Sprint', hall: 'Бассейн 1', coach: 'И. Лапина' },
+      { time: '11:30', section: 'Баскетбол U16', hall: 'Игровой зал', coach: 'Р. Гусев' },
+      { time: '13:00', section: 'Тхэквондо Start', hall: 'Зал единоборств', coach: 'Д. Сейтханов' },
+    ],
+  },
+]
 
-  if (currentRole === 'admin') {
-    return [
-      ...commonActions,
-      {
-        to: '/admin',
-        title: 'Админ-панель',
-        description: 'Общая статистика, тренеры, участники и секции.',
-      },
-    ]
-  }
+const achievementCards = [
+  {
+    title: 'Городские старты',
+    metric: 24,
+    suffix: '+',
+    description: 'Награды и призовые места воспитанников за текущий сезон.',
+  },
+  {
+    title: 'Личный прогресс',
+    metric: 87,
+    suffix: '%',
+    description: 'Средний рост посещаемости и вовлеченности по активным группам.',
+  },
+  {
+    title: 'Командные победы',
+    metric: 12,
+    suffix: '',
+    description: 'Победы команд на турнирах и открытых городских матчах.',
+  },
+]
 
-  if (currentRole === 'coach') {
-    return [
-      ...commonActions,
-      {
-        to: '/attendance',
-        title: 'Посещаемость',
-        description: 'Работа с журналом и составом тренировок.',
-      },
-    ]
-  }
+const dashboardMenu = ['Обзор', 'Секции', 'Посещаемость', 'Тренеры', 'Уведомления']
 
-  return [
-    ...commonActions,
-    {
-      to: '/achievements',
-      title: 'Достижения',
-      description: 'Просмотр результатов, наград и спортивного прогресса.',
-    },
-  ]
+const dashboardRows = [
+  { name: 'Алина Орлова', section: 'Плавание PRO', status: 'Присутствует' },
+  { name: 'Илья Карпов', section: 'Футбол Junior', status: 'Присутствует' },
+  { name: 'София Орлова', section: 'Гимнастика Kids', status: 'Опоздание' },
+  { name: 'Руслан Байкенов', section: 'Баскетбол U16', status: 'Отсутствует' },
+]
+
+function AnimatedCounter({ value, suffix = '' }) {
+  const [displayValue, setDisplayValue] = useState(0)
+
+  useEffect(() => {
+    if (!Number.isFinite(value)) {
+      return undefined
+    }
+
+    let frameId = 0
+    const duration = 900
+    const startedAt = performance.now()
+
+    function tick(now) {
+      const progress = Math.min((now - startedAt) / duration, 1)
+      setDisplayValue(Math.round(value * progress))
+
+      if (progress < 1) {
+        frameId = window.requestAnimationFrame(tick)
+      }
+    }
+
+    frameId = window.requestAnimationFrame(tick)
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [value])
+
+  return (
+    <>
+      {displayValue}
+      {suffix}
+    </>
+  )
 }
 
 export function HomePage() {
@@ -86,215 +179,341 @@ export function HomePage() {
     currentRole,
     currentUser,
     isAuthenticated,
+    isSyncingData,
+    profiles,
     roleOptions,
+    setRole,
+    signIn,
     stats,
   } = useAppState()
+  const navigate = useNavigate()
+  const [activeDay, setActiveDay] = useState(scheduleTabs[0].key)
 
-  const quickActions = getQuickActions(isAuthenticated, currentRole)
+  const activeSchedule = scheduleTabs.find((day) => day.key === activeDay) ?? scheduleTabs[0]
+  const showcaseStats = [
+    { label: 'Секций', value: stats.sectionCount, suffix: '' },
+    { label: 'Тренировок сегодня', value: stats.trainingsToday, suffix: '' },
+    { label: 'Участников', value: stats.participantCount, suffix: '' },
+    { label: 'Тренеров', value: stats.coachCount, suffix: '' },
+  ]
 
   return (
     <>
       <PageHeader
-        eyebrow="Главная панель"
-        title="Система управления спортивными секциями"
-        description="Главная страница теперь работает как спокойный минималистичный дашборд, а вход, регистрация и профиль вынесены в отдельные страницы."
+        eyebrow="Тёмный лендинг"
+        title="Система управления спортивными секциями и расписанием тренировок"
+        description="Главная страница оформлена как современный тёмный лендинг: фиксированная навигация, hero-блок, секции, расписание, достижения, превью дашборда и карточка входа."
         action={
-          isAuthenticated ? (
-            <Link className="button-secondary" to="/profile">
-              Открыть профиль
+          <div className="actions-row">
+            <Link className="button-secondary" to="/sections">
+              Смотреть секции
             </Link>
-          ) : (
-            <div className="actions-row">
-              <Link className="button-secondary" to="/login">
-                Вход
-              </Link>
-              <Link className="button" to="/register">
-                Регистрация
-              </Link>
-            </div>
-          )
+            <Link className="button" to={isAuthenticated ? '/profile' : '/register'}>
+              {isAuthenticated ? 'Открыть кабинет' : 'Начать сейчас'}
+            </Link>
+          </div>
         }
       />
 
-      <div className={`alert alert--${authFeedback.type}`}>{authFeedback.message}</div>
+      <Reveal className="landing-hero" delay={0}>
+        <div className="landing-hero__content">
+          <StatusPill tone={isAuthenticated ? 'success' : 'neutral'}>
+            {isAuthenticated ? `Роль: ${roleLabels[currentRole]}` : 'Гостевой просмотр'}
+          </StatusPill>
+
+          <h2 className="landing-hero__title">
+            Тёмный минимализм для спортивной платформы с акцентом на данные, ритм и
+            быстрый доступ к действиям.
+          </h2>
+
+          <p className="landing-hero__description">
+            Интерфейс объединяет секции, расписание, достижения, посещаемость и
+            административный обзор. Отдельные страницы входа и регистрации остаются в
+            системе, но главная теперь работает как полноценная презентационная витрина.
+          </p>
+
+          <div className="landing-hero__actions">
+            <Link className="button" to={isAuthenticated ? '/schedule' : '/login'}>
+              {isAuthenticated ? 'Открыть расписание' : 'Войти в систему'}
+            </Link>
+            <Link className="button-secondary" to="/admin">
+              Превью дашборда
+            </Link>
+          </div>
+        </div>
+
+        <div className="landing-hero__metrics">
+          {showcaseStats.map((item) => (
+            <article key={item.label} className="landing-hero__metric">
+              <strong className="landing-hero__metric-value">
+                <AnimatedCounter value={item.value} suffix={item.suffix} />
+              </strong>
+              <span className="landing-hero__metric-label">{item.label}</span>
+            </article>
+          ))}
+        </div>
+      </Reveal>
+
+      <Reveal className="stats-strip" delay={80}>
+        {showcaseStats.map((item) => (
+          <article key={item.label} className="stats-strip__item">
+            <span className="stats-strip__label">{item.label}</span>
+            <strong className="stats-strip__value">
+              <AnimatedCounter value={item.value} suffix={item.suffix} />
+            </strong>
+          </article>
+        ))}
+      </Reveal>
 
       <div className="page-grid page-grid--two">
-        <section className="hero-card">
-          <div className="hero-card__content">
-            <StatusPill tone={isAuthenticated ? 'success' : 'neutral'}>
-              {isAuthenticated ? `Активная роль: ${roleLabels[currentRole]}` : 'Публичный режим'}
-            </StatusPill>
-
-            <h2 className="hero-card__title">
-              {isAuthenticated
-                ? `Добро пожаловать, ${currentUser.fullName}`
-                : 'Управление секциями, расписанием и участниками в одном интерфейсе'}
-            </h2>
-
-            <p className="hero-card__summary">
-              {isAuthenticated
-                ? 'После входа система открывает персональные возможности по роли: профиль, достижения, посещаемость, расписание и административные сценарии.'
-                : 'Гости могут изучать секции и расписание, а отдельные страницы входа и регистрации помогают быстрее перейти в личный кабинет без перегруженной главной страницы.'}
-            </p>
-
-            <div className="hero-card__metrics">
-              <div className="hero-card__metric">
-                <span className="hero-card__metric-value">{stats.sectionCount}</span>
-                <span className="hero-card__metric-label">секций в системе</span>
-              </div>
-              <div className="hero-card__metric">
-                <span className="hero-card__metric-value">{stats.trainingsToday}</span>
-                <span className="hero-card__metric-label">тренировок сегодня</span>
-              </div>
-              <div className="hero-card__metric">
-                <span className="hero-card__metric-value">{stats.participantCount}</span>
-                <span className="hero-card__metric-label">участников в базе</span>
-              </div>
-              <div className="hero-card__metric">
-                <span className="hero-card__metric-value">{stats.coachCount}</span>
-                <span className="hero-card__metric-label">тренеров</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="card">
+        <Reveal className="card showcase-card" delay={120}>
           <div className="card__header">
             <div>
-              <h2 className="card__title">Быстрые действия</h2>
+              <h2 className="card__title">Секции</h2>
               <p className="card__description">
-                Частые сценарии теперь распределены по отдельным чистым экранам.
+                Карточки направлений со статусами набора и быстрым визуальным обзором.
               </p>
             </div>
           </div>
 
-          <div className="quick-links">
-            {quickActions.map((action) => (
-              <Link key={action.to} className="quick-link" to={action.to}>
-                <strong className="quick-link__title">{action.title}</strong>
-                <span className="quick-link__description">{action.description}</span>
-              </Link>
+          <div className="sport-grid">
+            {sportCards.map((item) => (
+              <article key={item.title} className="sport-card">
+                <div className="sport-card__top">
+                  <div>
+                    <strong className="sport-card__title">{item.title}</strong>
+                    <span className="sport-card__subtitle">{item.subtitle}</span>
+                  </div>
+                  <StatusPill tone={item.tone}>{item.status}</StatusPill>
+                </div>
+
+                <div className="sport-card__footer">
+                  <span>{item.meta}</span>
+                </div>
+              </article>
             ))}
           </div>
-        </section>
+        </Reveal>
+
+        <Reveal className="card showcase-card" delay={180}>
+          <div className="card__header">
+            <div>
+              <h2 className="card__title">Расписание</h2>
+              <p className="card__description">
+                Таблица с переключением по дням недели для быстрого просмотра слотов.
+              </p>
+            </div>
+          </div>
+
+          <div className="week-tabs">
+            {scheduleTabs.map((tab) => (
+              <button
+                key={tab.key}
+                className={`week-tabs__button${tab.key === activeDay ? ' week-tabs__button--active' : ''}`}
+                type="button"
+                onClick={() => setActiveDay(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="schedule-preview">
+            <table className="schedule-preview__table">
+              <thead>
+                <tr>
+                  <th>Время</th>
+                  <th>Секция</th>
+                  <th>Зал</th>
+                  <th>Тренер</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeSchedule.items.map((item) => (
+                  <tr key={`${activeSchedule.key}-${item.time}-${item.section}`}>
+                    <td>{item.time}</td>
+                    <td>{item.section}</td>
+                    <td>{item.hall}</td>
+                    <td>{item.coach}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Reveal>
       </div>
 
       <div className="page-grid page-grid--two">
-        <section className="card">
+        <Reveal className="card showcase-card" delay={220}>
           <div className="card__header">
             <div>
-              <h2 className="card__title">Что уже реализовано</h2>
+              <h2 className="card__title">Достижения</h2>
               <p className="card__description">
-                Основной функционал курсового проекта уже собран в единую систему.
+                Карточки наград, прогресса и счётчиков результатов по сезону.
               </p>
             </div>
           </div>
 
-          <div className="stack-list">
-            <article className="stack-list__item">
-              <strong className="stack-list__title">Регистрация и авторизация</strong>
-              <p className="stack-list__body">
-                Пользователи входят в систему по ролям, а спортсмен и родитель могут
-                регистрироваться самостоятельно.
-              </p>
-            </article>
-            <article className="stack-list__item">
-              <strong className="stack-list__title">Каталог секций</strong>
-              <p className="stack-list__body">
-                Доступны описания секций, тренеры, залы, расписание и свободные места.
-              </p>
-            </article>
-            <article className="stack-list__item">
-              <strong className="stack-list__title">Расписание и занятость</strong>
-              <p className="stack-list__body">
-                Система хранит тренировки, поддерживает изменения и контролирует занятость.
-              </p>
-            </article>
-            <article className="stack-list__item">
-              <strong className="stack-list__title">Достижения и посещаемость</strong>
-              <p className="stack-list__body">
-                Для защищенных ролей доступны личные результаты и журнал посещений.
-              </p>
-            </article>
+          <div className="achievement-cards">
+            {achievementCards.map((item) => (
+              <article key={item.title} className="achievement-card">
+                <span className="achievement-card__label">{item.title}</span>
+                <strong className="achievement-card__value">
+                  <AnimatedCounter value={item.metric} suffix={item.suffix} />
+                </strong>
+                <p className="achievement-card__description">{item.description}</p>
+              </article>
+            ))}
           </div>
-        </section>
+        </Reveal>
 
-        <section className="card">
+        <Reveal className="card showcase-card" delay={280}>
           <div className="card__header">
             <div>
-              <h2 className="card__title">
-                {isAuthenticated ? 'Текущий аккаунт' : 'Публичный сценарий'}
-              </h2>
+              <h2 className="card__title">Дашборд</h2>
               <p className="card__description">
-                {isAuthenticated
-                  ? 'Краткая сводка по активному пользователю и его роли.'
-                  : 'До входа можно спокойно изучить структуру системы и основные разделы.'}
+                Превью панели управления с меню и таблицей посещаемости.
               </p>
             </div>
           </div>
 
-          {isAuthenticated ? (
+          <div className="dashboard-preview">
+            <aside className="dashboard-preview__sidebar">
+              <span className="dashboard-preview__sidebar-title">Панель</span>
+              <div className="dashboard-preview__menu">
+                {dashboardMenu.map((item, index) => (
+                  <span
+                    key={item}
+                    className={`dashboard-preview__menu-item${index === 0 ? ' dashboard-preview__menu-item--active' : ''}`}
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </aside>
+
+            <div className="dashboard-preview__content">
+              <div className="dashboard-preview__stats">
+                <div className="dashboard-preview__stat">
+                  <span>Тренировок</span>
+                  <strong>18</strong>
+                </div>
+                <div className="dashboard-preview__stat">
+                  <span>Активных секций</span>
+                  <strong>06</strong>
+                </div>
+                <div className="dashboard-preview__stat">
+                  <span>Новых уведомлений</span>
+                  <strong>04</strong>
+                </div>
+              </div>
+
+              <table className="dashboard-preview__table">
+                <thead>
+                  <tr>
+                    <th>Спортсмен</th>
+                    <th>Секция</th>
+                    <th>Статус</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboardRows.map((row) => (
+                    <tr key={row.name}>
+                      <td>{row.name}</td>
+                      <td>{row.section}</td>
+                      <td>{row.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+
+      <div className="page-grid page-grid--two">
+        {!isAuthenticated ? (
+          <Reveal className="auth-spotlight" delay={320}>
+            <LoginFormCard
+              authFeedback={authFeedback}
+              currentRole={currentRole}
+              isSyncingData={isSyncingData}
+              onSuccess={() => navigate('/profile')}
+              profiles={profiles}
+              roleOptions={roleOptions}
+              setRole={setRole}
+              signIn={signIn}
+            />
+          </Reveal>
+        ) : (
+          <Reveal className="card showcase-card" delay={320}>
+            <div className="card__header">
+              <div>
+                <h2 className="card__title">Активная сессия</h2>
+                <p className="card__description">
+                  Вы уже вошли в систему и можете продолжить работу из личного кабинета.
+                </p>
+              </div>
+              <StatusPill tone="success">{roleLabels[currentRole]}</StatusPill>
+            </div>
+
             <div className="summary-list">
               <div className="summary-list__item">
                 <span className="summary-list__label">Пользователь</span>
                 <span className="summary-list__value">{currentUser.fullName}</span>
               </div>
               <div className="summary-list__item">
-                <span className="summary-list__label">Роль</span>
-                <span className="summary-list__value">{roleLabels[currentRole]}</span>
-              </div>
-              <div className="summary-list__item">
                 <span className="summary-list__label">E-mail</span>
                 <span className="summary-list__value">{currentUser.email}</span>
               </div>
               <div className="summary-list__item">
-                <span className="summary-list__label">Заметка</span>
-                <span className="summary-list__value">{currentUser.note}</span>
+                <span className="summary-list__label">Доступ</span>
+                <span className="summary-list__value">{currentUser.position}</span>
               </div>
             </div>
-          ) : (
-            <>
-              <ul className="bullet-list">
-                <li>Главная страница больше не перегружена формами входа и регистрации.</li>
-                <li>Для входа и регистрации сделаны отдельные спокойные страницы.</li>
-                <li>Профиль пользователя теперь тоже живет на собственном маршруте.</li>
-                <li>Публичные секции и расписание можно изучать без авторизации.</li>
-              </ul>
 
-              <div className="actions-row">
-                <Link className="button" to="/login">
-                  Открыть вход
-                </Link>
-                <Link className="button-secondary" to="/register">
-                  Перейти к регистрации
-                </Link>
-              </div>
-            </>
-          )}
-        </section>
-      </div>
+            <div className="landing-hero__actions">
+              <Link className="button" to="/profile">
+                Перейти в профиль
+              </Link>
+              <Link className="button-secondary" to="/schedule">
+                Открыть расписание
+              </Link>
+            </div>
+          </Reveal>
+        )}
 
-      <section className="card">
-        <div className="card__header">
-          <div>
-            <h2 className="card__title">Роли в системе</h2>
-            <p className="card__description">
-              Каждая роль получила собственный сценарий работы и набор доступных страниц.
-            </p>
+        <Reveal className="card showcase-card" delay={380}>
+          <div className="card__header">
+            <div>
+              <h2 className="card__title">Сценарии для ролей</h2>
+              <p className="card__description">
+                Все роли работают в одной системе, но получают разные уровни доступа.
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="card-grid">
-          {roleOptions.map((role) => (
-            <article key={role.value} className="meta-box">
-              <StatusPill tone={role.value === currentRole ? 'success' : 'neutral'}>
-                {role.label}
-              </StatusPill>
-              <strong className="meta-box__value">{role.summary}</strong>
-            </article>
-          ))}
-        </div>
-      </section>
+          <div className="role-pill-grid">
+            {roleOptions.map((role) => (
+              <article key={role.value} className="role-pill-card">
+                <StatusPill tone={role.value === currentRole ? 'success' : 'neutral'}>
+                  {role.label}
+                </StatusPill>
+                <p className="role-pill-card__description">{role.summary}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="landing-hero__actions">
+            <Link className="button-secondary" to="/sections">
+              Перейти к секциям
+            </Link>
+            <Link className="button" to={isAuthenticated ? '/profile' : '/register'}>
+              {isAuthenticated ? 'Мой кабинет' : 'Создать аккаунт'}
+            </Link>
+          </div>
+        </Reveal>
+      </div>
     </>
   )
 }

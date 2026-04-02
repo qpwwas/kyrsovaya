@@ -1,37 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@500;600;700;800&display=swap');
+
 :root {
-  --bg: #f4f6fb;
-  --bg-strong: #eef2f8;
-  --panel: rgba(255, 255, 255, 0.82);
-  --panel-strong: rgba(255, 255, 255, 0.96);
-  --panel-soft: rgba(248, 250, 252, 0.9);
-  --ink: #111827;
-  --muted: #64748b;
-  --muted-strong: #334155;
-  --line: rgba(15, 23, 42, 0.08);
-  --line-strong: rgba(15, 23, 42, 0.14);
-  --accent: #3b82f6;
-  --accent-strong: #2563eb;
-  --info: #0284c7;
-  --info-soft: rgba(2, 132, 199, 0.12);
-  --warning: #d97706;
-  --warning-soft: rgba(217, 119, 6, 0.12);
-  --danger: #dc2626;
-  --danger-soft: rgba(220, 38, 38, 0.12);
-  --success: #16a34a;
-  --success-soft: rgba(22, 163, 74, 0.12);
-  --shadow-sm: 0 10px 28px rgba(15, 23, 42, 0.05);
-  --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.08);
+  --bg: #040907;
+  --bg-strong: #08110d;
+  --panel: rgba(8, 14, 12, 0.82);
+  --panel-strong: rgba(11, 18, 15, 0.96);
+  --panel-soft: rgba(16, 24, 21, 0.92);
+  --ink: #f4f8f6;
+  --muted: #8aa198;
+  --muted-strong: #c8d6d0;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  --accent: #00e5a0;
+  --accent-strong: #00c788;
+  --info: #56c6ff;
+  --info-soft: rgba(86, 198, 255, 0.12);
+  --warning: #ffb74a;
+  --warning-soft: rgba(255, 183, 74, 0.12);
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.12);
+  --success: #7dffb6;
+  --success-soft: rgba(125, 255, 182, 0.12);
+  --shadow-sm: 0 18px 40px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 40px 120px rgba(0, 0, 0, 0.42);
   --radius-lg: 22px;
   --radius-md: 16px;
   --content-width: 1360px;
-  --font-body: 'Aptos', 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
-  --font-heading: 'Aptos Display', 'Bahnschrift', 'Trebuchet MS', sans-serif;
+  --font-body: 'DM Sans', 'Segoe UI', sans-serif;
+  --font-heading: 'Syne', 'Bahnschrift', sans-serif;
   --font-mono: 'Cascadia Code', 'Consolas', monospace;
   color: var(--ink);
   background:
-    radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.08), transparent 30%),
-    radial-gradient(circle at 100% 0%, rgba(15, 23, 42, 0.04), transparent 24%),
-    linear-gradient(180deg, #fafbff 0%, var(--bg) 52%, #eef3f8 100%);
+    radial-gradient(circle at 0% 0%, rgba(0, 229, 160, 0.12), transparent 30%),
+    radial-gradient(circle at 100% 0%, rgba(0, 229, 160, 0.06), transparent 24%),
+    linear-gradient(180deg, #030806 0%, var(--bg) 52%, #07100c 100%);
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.55;
@@ -56,6 +58,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   color: var(--ink);
+  background: transparent;
 }
 
 body::before,
@@ -68,12 +71,10 @@ body::after {
 
 body::before {
   background:
-    repeating-linear-gradient(
-      90deg,
-      rgba(15, 23, 42, 0.025) 0 1px,
-      transparent 1px 40px
-    );
-  opacity: 0.35;
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.28;
 }
 
 body::after {
@@ -81,18 +82,17 @@ body::after {
   width: 420px;
   height: 420px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.12), transparent 68%);
-  filter: blur(12px);
+  background: radial-gradient(circle, rgba(0, 229, 160, 0.16), transparent 68%);
+  filter: blur(14px);
 }
 
 #root {
   position: relative;
   min-height: 100vh;
-  isolation: isolate;
 }
 
 ::selection {
-  background: rgba(59, 130, 246, 0.16);
+  background: rgba(0, 229, 160, 0.24);
   color: var(--ink);
 }
 
@@ -121,8 +121,8 @@ h4 {
   color: var(--ink);
   font-family: var(--font-heading);
   font-weight: 700;
-  line-height: 1.04;
-  letter-spacing: -0.03em;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
 }
 
 p {

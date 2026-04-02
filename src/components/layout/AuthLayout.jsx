@@ -1,28 +1,46 @@
 import { Link, Outlet } from 'react-router-dom'
+import { SiteFooter } from './SiteFooter'
 
 export function AuthLayout() {
   return (
     <div className="auth-shell">
-      <div className="auth-shell__frame">
-        <header className="auth-shell__header">
-          <Link className="auth-shell__brand" to="/">
-            SportSpace Manager
+      <header className="topbar topbar--auth">
+        <div className="topbar__row">
+          <Link className="brand brand--compact" to="/">
+            <span className="brand__eyebrow">SportSpace</span>
+            <span className="brand__title">Manager</span>
           </Link>
 
-          <div className="actions-row">
-            <Link className="button-secondary" to="/">
+          <nav className="shell-nav" aria-label="Навигация авторизации">
+            <Link className="shell-nav__link" to="/">
               Главная
             </Link>
-            <Link className="button-secondary" to="/sections">
+            <Link className="shell-nav__link" to="/sections">
               Секции
             </Link>
-          </div>
-        </header>
+            <Link className="shell-nav__link" to="/schedule">
+              Расписание
+            </Link>
+          </nav>
 
-        <main className="auth-shell__body">
+          <div className="topbar__controls">
+            <Link className="button-secondary" to="/login">
+              Вход
+            </Link>
+            <Link className="button" to="/register">
+              Регистрация
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="auth-shell__body">
+        <div className="page-stack">
           <Outlet />
-        </main>
-      </div>
+        </div>
+      </main>
+
+      <SiteFooter />
     </div>
   )
 }
