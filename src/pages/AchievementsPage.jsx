@@ -28,7 +28,7 @@ export function AchievementsPage() {
       />
 
       <section className="achievement-grid">
-        {visibleParticipants.map((participant) => {
+        {visibleParticipants.length ? visibleParticipants.map((participant) => {
           const participantAchievements = achievements.filter(
             (item) => item.participantId === participant.id,
           )
@@ -90,7 +90,12 @@ export function AchievementsPage() {
               )}
             </article>
           )
-        })}
+        }) : (
+          <div className="empty-state">
+            Для этого режима пока нет доступных данных. Выполните вход, чтобы увидеть
+            достижения и персональную статистику.
+          </div>
+        )}
       </section>
     </>
   )

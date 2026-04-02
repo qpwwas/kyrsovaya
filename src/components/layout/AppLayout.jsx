@@ -18,9 +18,13 @@ export function AppLayout() {
   const {
     currentRole,
     currentUser,
+    isAuthenticated,
+    isBootstrapping,
+    isSyncingData,
     notifications,
     roleOptions,
     setRole,
+    signOut,
     stats,
   } = useAppState()
 
@@ -34,26 +38,42 @@ export function AppLayout() {
               <h1 className="brand__title">SportSpace Manager</h1>
               <p className="brand__subtitle">
                 Управление спортивными секциями, тренировками, залами и личными
-                кабинетами с разными ролями пользователей.
+                кабинетами с реальными данными из backend API.
               </p>
             </div>
 
             <div className="topbar__controls">
-              <StatusPill tone="info">{roleLabels[currentRole]}</StatusPill>
-              <div className="field role-switch">
-                <label htmlFor="role-mode">Режим просмотра</label>
-                <select
-                  id="role-mode"
-                  value={currentRole}
-                  onChange={(event) => setRole(event.target.value)}
-                >
-                  {roleOptions.map((role) => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <StatusPill tone={isAuthenticated ? 'success' : 'warning'}>
+                {isAuthenticated ? roleLabels[currentRole] : 'Гостевой режим'}
+              </StatusPill>
+              <StatusPill tone={isSyncingData || isBootstrapping ? 'info' : 'neutral'}>
+                {isBootstrapping
+                  ? 'загрузка'
+                  : isSyncingData
+                    ? 'синхронизация'
+                    : 'готово'}
+              </StatusPill>
+
+              {isAuthenticated ? (
+                <button className="button-secondary" type="button" onClick={signOut}>
+                  Выйти
+                </button>
+              ) : (
+                <div className="field role-switch">
+                  <label htmlFor="role-mode">Демо-режим</label>
+                  <select
+                    id="role-mode"
+                    value={currentRole}
+                    onChange={(event) => setRole(event.target.value)}
+                  >
+                    {roleOptions.map((role) => (
+                      <option key={role.value} value={role.value}>
+                        {role.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 
@@ -83,11 +103,11 @@ export function AppLayout() {
               <div className="sidebar-panel__header">
                 <div>
                   <h2 className="sidebar-panel__title">Активный профиль</h2>
-                  <p className="sidebar-panel__description">
-                    {currentUser.fullName}
-                  </p>
+                  <p className="sidebar-panel__description">{currentUser.fullName}</p>
                 </div>
-                <StatusPill tone="success">{currentUser.position}</StatusPill>
+                <StatusPill tone={isAuthenticated ? 'success' : 'info'}>
+                  {currentUser.position}
+                </StatusPill>
               </div>
 
               <ul className="mini-list">
@@ -102,7 +122,7 @@ export function AppLayout() {
                 <div>
                   <h2 className="sidebar-panel__title">Быстрая статистика</h2>
                   <p className="sidebar-panel__description">
-                    Сводка для администратора и тренерского штаба
+                    Сводка по секциям, тренировкам и тренерскому составу
                   </p>
                 </div>
               </div>
@@ -111,7 +131,7 @@ export function AppLayout() {
                 <StatCard
                   label="Тренировок сегодня"
                   value={stats.trainingsToday}
-                  hint="Все активные слоты на текущий день"
+                  hint="По текущему расписанию из API"
                 />
                 <StatCard
                   label="Секций в системе"
@@ -121,7 +141,7 @@ export function AppLayout() {
                 <StatCard
                   label="Тренеров"
                   value={stats.coachCount}
-                  hint="Под контролем административной панели"
+                  hint="Учитываются по активным секциям"
                 />
               </div>
             </section>
@@ -131,7 +151,7 @@ export function AppLayout() {
                 <div>
                   <h2 className="sidebar-panel__title">Уведомления</h2>
                   <p className="sidebar-panel__description">
-                    Изменения расписания и статус важных действий
+                    События интерфейса и результаты последних действий
                   </p>
                 </div>
               </div>

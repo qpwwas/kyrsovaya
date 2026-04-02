@@ -5,6 +5,7 @@ import { achievementRouter } from './routes/achievementRoutes.js'
 import { attendanceRouter } from './routes/attendanceRoutes.js'
 import { authRouter } from './routes/authRoutes.js'
 import { dashboardRouter } from './routes/dashboardRoutes.js'
+import { participantRouter } from './routes/participantRoutes.js'
 import { scheduleRouter } from './routes/scheduleRoutes.js'
 import { sectionRouter } from './routes/sectionRoutes.js'
 
@@ -26,6 +27,7 @@ export function createApp() {
   app.use('/api/schedule', scheduleRouter)
   app.use('/api/attendance', attendanceRouter)
   app.use('/api/achievements', achievementRouter)
+  app.use('/api/participants', participantRouter)
   app.use('/api/dashboard', dashboardRouter)
 
   app.use('/api/*splat', (_request, response) => {

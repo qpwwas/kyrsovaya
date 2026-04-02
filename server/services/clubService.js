@@ -19,6 +19,18 @@ function parseTags(tagsJson) {
   }
 }
 
+function mapParticipant(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    age: row.age,
+    level: row.level,
+    parentName: row.parent_name,
+    focus: row.focus,
+    sectionIds: parseCsvList(row.section_ids),
+  }
+}
+
 function getManagedAthletes(userId) {
   return db
     .prepare(
@@ -100,6 +112,36 @@ export function getUserById(userId) {
   return mapUser(row)
 }
 
+export function updateCurrentUser(userId, payload) {
+  const fullName = payload.fullName?.trim() ?? ''
+  const phone = payload.phone?.trim() ?? ''
+  const emergencyContact = payload.emergencyContact?.trim() ?? ''
+  const note = payload.note?.trim() ?? ''
+
+  if (fullName.length < 3) {
+    throw createError(400, 'ФИО должно содержать не менее 3 символов.')
+  }
+
+  if (!phone) {
+    throw createError(400, 'Укажите контактный номер телефона.')
+  }
+
+  if (!emergencyContact) {
+    throw createError(400, 'Заполните поле для экстренной связи.')
+  }
+
+  db.prepare(`
+    UPDATE users
+    SET full_name = ?,
+        phone = ?,
+        emergency_contact = ?,
+        note = ?
+    WHERE id = ?
+  `).run(fullName, phone, emergencyContact, note, userId)
+
+  return getUserById(userId)
+}
+
 export function authenticateCredentials(email, password) {
   const row = db
     .prepare('SELECT * FROM users WHERE lower(email) = lower(?)')
@@ -133,6 +175,42 @@ export function listSections() {
     .all()
 
   return rows.map(mapSection)
+}
+
+export function listParticipants(user) {
+  const baseQuery = `
+    SELECT
+      p.id,
+      p.name,
+      p.age,
+      p.level,
+      p.parent_name,
+      p.focus,
+      GROUP_CONCAT(sp.section_id) AS section_ids
+    FROM participants p
+    LEFT JOIN section_participants sp ON sp.participant_id = p.id
+  `
+
+  let rows = []
+
+  if (user.role === 'athlete' && user.athleteId) {
+    rows = db
+      .prepare(`${baseQuery} WHERE p.id = ? GROUP BY p.id ORDER BY p.name`)
+      .all(user.athleteId)
+  } else if (user.role === 'parent' && user.managedAthletes.length) {
+    const placeholders = user.managedAthletes.map(() => '?').join(', ')
+    rows = db
+      .prepare(
+        `${baseQuery} WHERE p.id IN (${placeholders}) GROUP BY p.id ORDER BY p.name`,
+      )
+      .all(...user.managedAthletes)
+  } else if (user.role === 'parent') {
+    rows = []
+  } else {
+    rows = db.prepare(`${baseQuery} GROUP BY p.id ORDER BY p.name`).all()
+  }
+
+  return rows.map(mapParticipant)
 }
 
 export function enrollInSection(user, sectionId, requestedParticipantIds = []) {

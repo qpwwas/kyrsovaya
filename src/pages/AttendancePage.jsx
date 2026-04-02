@@ -15,9 +15,14 @@ export function AttendancePage() {
   const [selectedRegisterId, setSelectedRegisterId] = useState(
     attendanceRegisters[0]?.sessionId ?? '',
   )
+  const activeRegisterId = attendanceRegisters.some(
+    (register) => register.sessionId === selectedRegisterId,
+  )
+    ? selectedRegisterId
+    : attendanceRegisters[0]?.sessionId ?? ''
 
   const currentRegister =
-    attendanceRegisters.find((register) => register.sessionId === selectedRegisterId) ??
+    attendanceRegisters.find((register) => register.sessionId === activeRegisterId) ??
     attendanceRegisters[0]
 
   const summary = currentRegister
@@ -61,7 +66,7 @@ export function AttendancePage() {
             <label htmlFor="register-id">Тренировка</label>
             <select
               id="register-id"
-              value={selectedRegisterId}
+              value={activeRegisterId}
               onChange={(event) => setSelectedRegisterId(event.target.value)}
             >
               {attendanceRegisters.map((register) => (

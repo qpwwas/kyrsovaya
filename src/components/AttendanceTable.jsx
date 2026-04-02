@@ -33,12 +33,15 @@ export function AttendanceTable({
         <tbody>
           {register.marks.map((mark) => {
             const participant = participantsById[mark.participantId]
+            const participantName = participant?.name ?? mark.participantName
+            const participantAge = participant?.age ?? mark.age
+            const parentName = participant?.parentName ?? mark.parentName
 
             return (
               <tr key={mark.participantId}>
-                <td>{participant.name}</td>
-                <td>{participant.age}</td>
-                <td>{participant.parentName}</td>
+                <td>{participantName}</td>
+                <td>{participantAge}</td>
+                <td>{parentName}</td>
                 <td>
                   <StatusPill tone={statusTones[mark.status]}>
                     {statusLabels[mark.status]}

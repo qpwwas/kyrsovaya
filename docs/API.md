@@ -81,6 +81,21 @@ Response:
 
 Returns the current authenticated user.
 
+### `PATCH /auth/me`
+
+Updates the current authenticated user profile.
+
+Request body:
+
+```json
+{
+  "fullName": "Екатерина Смирнова",
+  "phone": "+7 (701) 555-10-01",
+  "emergencyContact": "Дежурный администратор, +7 (701) 555-10-99",
+  "note": "Контролирует загрузку залов и публикует срочные объявления."
+}
+```
+
 ### `GET /sections`
 
 Returns all sports sections with capacity and participant counters.
@@ -125,6 +140,16 @@ Allowed roles:
 - `coach`
 
 The API checks conflicts by hall and by coach.
+
+### `GET /participants`
+
+Returns participants available for the current role.
+
+Visibility rules:
+
+- `admin` and `coach` receive the full list
+- `athlete` receives only their own profile
+- `parent` receives only linked children
 
 ### `GET /attendance`
 

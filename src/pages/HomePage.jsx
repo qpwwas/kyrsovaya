@@ -385,7 +385,7 @@ export function HomePage() {
       </div>
 
       <ProfileCard
-        key={currentRole}
+        key={`${currentRole}-${currentUser.phone}-${currentUser.note}`}
         currentUser={currentUser}
         profileFeedback={profileFeedback}
         updateProfile={updateProfile}

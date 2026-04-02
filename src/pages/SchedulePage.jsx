@@ -129,9 +129,12 @@ export function SchedulePage() {
   const { currentRole, halls, rescheduleSession, schedule, sectionsById } = useAppState()
   const [selectedSessionId, setSelectedSessionId] = useState(schedule[0]?.id ?? '')
   const [hallFilter, setHallFilter] = useState('all')
+  const activeSessionId = schedule.some((session) => session.id === selectedSessionId)
+    ? selectedSessionId
+    : schedule[0]?.id ?? ''
 
   const selectedSession =
-    schedule.find((session) => session.id === selectedSessionId) ?? schedule[0]
+    schedule.find((session) => session.id === activeSessionId) ?? schedule[0]
 
   const filteredSchedule = schedule.filter(
     (session) => hallFilter === 'all' || session.hall === hallFilter,
@@ -197,13 +200,13 @@ export function SchedulePage() {
         </section>
 
         <ScheduleEditorCard
-          key={selectedSessionId}
+          key={activeSessionId}
           currentRole={currentRole}
           halls={halls}
           rescheduleSession={rescheduleSession}
           schedule={schedule}
           selectedSession={selectedSession}
-          selectedSessionId={selectedSessionId}
+          selectedSessionId={activeSessionId}
           setSelectedSessionId={setSelectedSessionId}
         />
       </div>

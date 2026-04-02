@@ -1,6 +1,9 @@
 import { Router } from 'express'
 import { authenticateRequest, createToken } from '../middleware/auth.js'
-import { authenticateCredentials } from '../services/clubService.js'
+import {
+  authenticateCredentials,
+  updateCurrentUser,
+} from '../services/clubService.js'
 
 export const authRouter = Router()
 
@@ -31,4 +34,17 @@ authRouter.get('/me', authenticateRequest, (request, response) => {
   response.json({
     user: request.user,
   })
+})
+
+authRouter.patch('/me', authenticateRequest, (request, response, next) => {
+  try {
+    const user = updateCurrentUser(request.user.id, request.body ?? {})
+
+    response.json({
+      message: 'Профиль обновлен.',
+      user,
+    })
+  } catch (error) {
+    next(error)
+  }
 })

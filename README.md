@@ -7,6 +7,8 @@
 - frontend на React с ролями, кабинетами, секциями, расписанием, посещаемостью, достижениями и административной панелью;
 - backend на Node.js + Express с REST API, SQLite и хешированием паролей через `bcryptjs`.
 
+Frontend уже начал работать с реальным API: авторизация, загрузка секций, расписания, участников, посещаемости, достижений и обновление профиля идут через backend.
+
 ## Реализовано
 
 - роли пользователей: администратор, тренер, спортсмен, родитель;
@@ -75,10 +77,12 @@ npm run lint
 - Health check: `GET /api/health`
 - Авторизация: `POST /api/auth/login`
 - Текущий пользователь: `GET /api/auth/me`
+- Обновление профиля: `PATCH /api/auth/me`
 - Секции: `GET /api/sections`
 - Запись в секцию: `POST /api/sections/:sectionId/enroll`
 - Расписание: `GET /api/schedule`
 - Изменение расписания: `PATCH /api/schedule/:sessionId`
+- Участники: `GET /api/participants`
 - Посещаемость: `GET /api/attendance`
 - Изменение посещаемости: `PATCH /api/attendance/:sessionId`
 - Достижения: `GET /api/achievements`
@@ -118,7 +122,7 @@ server/
 
 Следующий этап для развития курсовой:
 
-1. Подключить frontend к реальному backend вместо локальных mock-state данных.
+1. Полностью перевести все страницы frontend на единый API-слой без остаточных mock-сценариев.
 2. Добавить регистрацию новых пользователей через API.
 3. Реализовать загрузку медиафайлов и аватаров.
 4. Подготовить деплой frontend и backend.

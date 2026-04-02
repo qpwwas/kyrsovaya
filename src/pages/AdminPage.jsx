@@ -4,10 +4,16 @@ import { StatusPill } from '../components/StatusPill'
 import { useAppState } from '../context/useAppState'
 import { formatDateTime } from '../utils/format'
 
+function getTodayKey() {
+  return new Intl.DateTimeFormat('sv-SE').format(new Date())
+}
+
 export function AdminPage() {
   const { currentRole, participants, schedule, sections, stats } = useAppState()
 
-  const todaySessions = schedule.filter((session) => session.dateTime.startsWith('2026-03-31'))
+  const todaySessions = schedule.filter((session) =>
+    session.dateTime.startsWith(getTodayKey()),
+  )
   const coachLoad = sections.reduce((accumulator, section) => {
     const existing = accumulator[section.coach] ?? 0
     return {
