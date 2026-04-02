@@ -5,9 +5,43 @@ import { StatusPill } from '../components/StatusPill'
 import { useAppState } from '../context/useAppState'
 import { roleLabels } from '../utils/format'
 
+const registrationRoleOptions = [
+  {
+    value: 'athlete',
+    label: 'Спортсмен',
+    summary: 'Создает личный профиль и получает возможность записываться в секции.',
+  },
+  {
+    value: 'parent',
+    label: 'Родитель',
+    summary: 'Создает свой кабинет и сразу добавляет ребенка в систему.',
+  },
+]
+
+function createRegistrationForm(role = 'athlete') {
+  return {
+    role,
+    fullName: '',
+    email: '',
+    phone: '',
+    emergencyContact: '',
+    password: '',
+    note: '',
+    parentName: '',
+    athleteAge: '',
+    athleteLevel: '',
+    athleteFocus: '',
+    childName: '',
+    childAge: '',
+    childLevel: '',
+    childFocus: '',
+  }
+}
+
 function LoginCard({
   currentRole,
-  authFeedback,
+  isAuthenticated,
+  isSyncingData,
   profiles,
   roleOptions,
   signIn,
@@ -37,16 +71,17 @@ function LoginCard({
     <section className="card">
       <div className="card__header">
         <div>
-          <h2 className="card__title">Авторизация по ролям</h2>
+          <h2 className="card__title">Вход в систему</h2>
           <p className="card__description">
-            Демо-вход с валидацией формы и переключением сценариев пользователя.
+            Авторизация по ролям администратора, тренера, спортсмена и родителя.
           </p>
         </div>
+        <StatusPill tone={isAuthenticated ? 'success' : 'info'}>
+          {isAuthenticated ? 'Сессия активна' : 'Готово к входу'}
+        </StatusPill>
       </div>
 
       <form className="form-grid" onSubmit={handleLoginSubmit}>
-        <div className={`alert alert--${authFeedback.type}`}>{authFeedback.message}</div>
-
         <div className="form-grid form-grid--two">
           <div className="field">
             <label htmlFor="login-role">Роль</label>
@@ -102,7 +137,7 @@ function LoginCard({
         </div>
 
         <div className="actions-row">
-          <button className="button" type="submit">
+          <button className="button" type="submit" disabled={isSyncingData}>
             Войти в систему
           </button>
         </div>
@@ -134,7 +169,258 @@ function LoginCard({
   )
 }
 
-function ProfileCard({ currentUser, profileFeedback, updateProfile }) {
+function RegistrationCard({ isAuthenticated, isSyncingData, registerUser }) {
+  const [registrationForm, setRegistrationForm] = useState(createRegistrationForm())
+
+  function updateField(field, value) {
+    setRegistrationForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }))
+  }
+
+  function handleRoleChange(nextRole) {
+    setRegistrationForm((previous) => ({
+      ...createRegistrationForm(nextRole),
+      fullName: previous.fullName,
+      email: previous.email,
+      phone: previous.phone,
+      emergencyContact: previous.emergencyContact,
+      password: previous.password,
+      note: previous.note,
+    }))
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault()
+    registerUser(registrationForm)
+  }
+
+  if (isAuthenticated) {
+    return (
+      <section className="card">
+        <div className="card__header">
+          <div>
+            <h2 className="card__title">Регистрация завершена</h2>
+            <p className="card__description">
+              Новый аккаунт уже открыт. Для создания еще одной учетной записи сначала
+              выйдите из текущей сессии.
+            </p>
+          </div>
+          <StatusPill tone="success">Аккаунт активен</StatusPill>
+        </div>
+
+        <ul className="bullet-list">
+          <li>спортсмен может сразу записываться в секции и смотреть достижения</li>
+          <li>родитель получает кабинет и привязанного ребенка</li>
+          <li>контактные данные можно уточнить в личном кабинете ниже</li>
+        </ul>
+      </section>
+    )
+  }
+
+  return (
+    <section className="card">
+      <div className="card__header">
+        <div>
+          <h2 className="card__title">Регистрация нового пользователя</h2>
+          <p className="card__description">
+            Публичная регистрация доступна для спортсмена и родителя.
+          </p>
+        </div>
+      </div>
+
+      <form className="form-grid" onSubmit={handleSubmit}>
+        <div className="field">
+          <label htmlFor="register-role">Кого регистрируем</label>
+          <select
+            id="register-role"
+            value={registrationForm.role}
+            onChange={(event) => handleRoleChange(event.target.value)}
+          >
+            {registrationRoleOptions.map((role) => (
+              <option key={role.value} value={role.value}>
+                {role.label}
+              </option>
+            ))}
+          </select>
+          <span className="inline-note">
+            {
+              registrationRoleOptions.find((role) => role.value === registrationForm.role)
+                ?.summary
+            }
+          </span>
+        </div>
+
+        <div className="form-grid form-grid--two">
+          <div className="field">
+            <label htmlFor="register-full-name">ФИО</label>
+            <input
+              id="register-full-name"
+              value={registrationForm.fullName}
+              onChange={(event) => updateField('fullName', event.target.value)}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="register-email">E-mail</label>
+            <input
+              id="register-email"
+              type="email"
+              value={registrationForm.email}
+              onChange={(event) => updateField('email', event.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="form-grid form-grid--two">
+          <div className="field">
+            <label htmlFor="register-phone">Телефон</label>
+            <input
+              id="register-phone"
+              value={registrationForm.phone}
+              onChange={(event) => updateField('phone', event.target.value)}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="register-password">Пароль</label>
+            <input
+              id="register-password"
+              type="password"
+              value={registrationForm.password}
+              onChange={(event) => updateField('password', event.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="register-contact">Экстренная связь</label>
+          <input
+            id="register-contact"
+            value={registrationForm.emergencyContact}
+            placeholder="Контакт на случай переноса тренировки или ЧС"
+            onChange={(event) => updateField('emergencyContact', event.target.value)}
+          />
+        </div>
+
+        {registrationForm.role === 'athlete' ? (
+          <div className="form-grid">
+            <div className="form-grid form-grid--two">
+              <div className="field">
+                <label htmlFor="register-parent-name">Родитель или представитель</label>
+                <input
+                  id="register-parent-name"
+                  value={registrationForm.parentName}
+                  onChange={(event) => updateField('parentName', event.target.value)}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="register-athlete-age">Возраст спортсмена</label>
+                <input
+                  id="register-athlete-age"
+                  type="number"
+                  min="5"
+                  max="25"
+                  value={registrationForm.athleteAge}
+                  onChange={(event) => updateField('athleteAge', event.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-grid form-grid--two">
+              <div className="field">
+                <label htmlFor="register-athlete-level">Уровень подготовки</label>
+                <input
+                  id="register-athlete-level"
+                  value={registrationForm.athleteLevel}
+                  placeholder="Начальный, средний, продвинутый"
+                  onChange={(event) => updateField('athleteLevel', event.target.value)}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="register-athlete-focus">Спортивный фокус</label>
+                <input
+                  id="register-athlete-focus"
+                  value={registrationForm.athleteFocus}
+                  placeholder="Например: плавание на короткие дистанции"
+                  onChange={(event) => updateField('athleteFocus', event.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="form-grid">
+            <div className="form-grid form-grid--two">
+              <div className="field">
+                <label htmlFor="register-child-name">Имя ребенка</label>
+                <input
+                  id="register-child-name"
+                  value={registrationForm.childName}
+                  onChange={(event) => updateField('childName', event.target.value)}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="register-child-age">Возраст ребенка</label>
+                <input
+                  id="register-child-age"
+                  type="number"
+                  min="5"
+                  max="25"
+                  value={registrationForm.childAge}
+                  onChange={(event) => updateField('childAge', event.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-grid form-grid--two">
+              <div className="field">
+                <label htmlFor="register-child-level">Уровень ребенка</label>
+                <input
+                  id="register-child-level"
+                  value={registrationForm.childLevel}
+                  placeholder="Начальный, средний, продвинутый"
+                  onChange={(event) => updateField('childLevel', event.target.value)}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="register-child-focus">Направление подготовки</label>
+                <input
+                  id="register-child-focus"
+                  value={registrationForm.childFocus}
+                  placeholder="Например: гимнастика и координация"
+                  onChange={(event) => updateField('childFocus', event.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="field">
+          <label htmlFor="register-note">Комментарий</label>
+          <textarea
+            id="register-note"
+            value={registrationForm.note}
+            placeholder="Медицинские пометки, цели на сезон, пожелания по расписанию"
+            onChange={(event) => updateField('note', event.target.value)}
+          />
+        </div>
+
+        <div className="actions-row">
+          <button className="button" type="submit" disabled={isSyncingData}>
+            Создать аккаунт
+          </button>
+        </div>
+      </form>
+    </section>
+  )
+}
+
+function ProfileCard({ currentUser, isSyncingData, profileFeedback, updateProfile }) {
   const [profileForm, setProfileForm] = useState({
     fullName: currentUser.fullName,
     phone: currentUser.phone,
@@ -160,9 +446,7 @@ function ProfileCard({ currentUser, profileFeedback, updateProfile }) {
       </div>
 
       <form className="form-grid" onSubmit={handleProfileSubmit}>
-        <div className={`alert alert--${profileFeedback.type}`}>
-          {profileFeedback.message}
-        </div>
+        <div className={`alert alert--${profileFeedback.type}`}>{profileFeedback.message}</div>
 
         <div className="form-grid form-grid--two">
           <div className="field">
@@ -178,6 +462,7 @@ function ProfileCard({ currentUser, profileFeedback, updateProfile }) {
               }
             />
           </div>
+
           <div className="field">
             <label htmlFor="profile-phone">Телефон</label>
             <input
@@ -222,11 +507,33 @@ function ProfileCard({ currentUser, profileFeedback, updateProfile }) {
         </div>
 
         <div className="actions-row">
-          <button className="button" type="submit">
+          <button className="button" type="submit" disabled={isSyncingData}>
             Сохранить изменения
           </button>
         </div>
       </form>
+    </section>
+  )
+}
+
+function GuestCabinetCard() {
+  return (
+    <section className="card">
+      <div className="card__header">
+        <div>
+          <h2 className="card__title">Личный кабинет откроется после входа</h2>
+          <p className="card__description">
+            Пока доступен только публичный каталог секций и расписание тренировок.
+          </p>
+        </div>
+        <StatusPill tone="warning">Гостевой режим</StatusPill>
+      </div>
+
+      <ul className="bullet-list">
+        <li>спортсмен после входа видит свои достижения и посещаемость</li>
+        <li>родитель получает доступ к данным ребенка и записи в секции</li>
+        <li>тренер и администратор могут менять расписание и журнал посещаемости</li>
+      </ul>
     </section>
   )
 }
@@ -236,8 +543,11 @@ export function HomePage() {
     authFeedback,
     currentRole,
     currentUser,
+    isAuthenticated,
+    isSyncingData,
     profileFeedback,
     profiles,
+    registerUser,
     roleOptions,
     signIn,
     stats,
@@ -246,24 +556,24 @@ export function HomePage() {
 
   const roleHighlights = {
     admin: [
-      'контроль секций и загрузки залов',
-      'статистика тренировок на день',
-      'публикация уведомлений',
+      'контроль секций, занятости залов и общей статистики',
+      'работа с административной панелью и списками участников',
+      'проверка нагрузки тренеров и количества тренировок на день',
     ],
     coach: [
-      'ведение списка участников',
-      'коррекция расписания без конфликтов',
-      'учет посещаемости после тренировки',
+      'ведение списка участников и редактирование посещаемости',
+      'корректировка расписания без конфликтов по залам и тренерам',
+      'оперативная работа с составом групп',
     ],
     athlete: [
-      'запись в секции',
-      'просмотр результатов и достижений',
-      'управление личными данными',
+      'запись в секции и просмотр собственных достижений',
+      'контроль личного расписания и посещаемости',
+      'редактирование контактных данных в кабинете',
     ],
     parent: [
-      'контроль расписания ребенка',
-      'получение важных уведомлений',
-      'просмотр прогресса и посещаемости',
+      'контроль расписания ребенка и уведомлений по изменениям',
+      'просмотр достижений и посещаемости привязанного спортсмена',
+      'запись ребенка в подходящие секции',
     ],
   }
 
@@ -271,19 +581,19 @@ export function HomePage() {
     <>
       <PageHeader
         eyebrow="Личный кабинет и роли"
-        title="Система управления спортивными секциями и тренировками"
-        description="Демонстрационный фронтенд покрывает ключевые сценарии курсовой: регистрацию и авторизацию по ролям, личный кабинет, запись в секции, управление расписанием, контроль залов, посещаемость, достижения и административную панель."
+        title="Система управления спортивными секциями и расписанием тренировок"
+        description="Интерфейс покрывает ключевые критерии курсовой: регистрацию и авторизацию, роли пользователей, личный кабинет, секции, расписание, посещаемость, достижения и административный контроль."
       />
 
       <section className="hero-card">
         <div className="hero-card__content">
-          <StatusPill tone="info">
+          <StatusPill tone={isAuthenticated ? 'success' : 'info'}>
             Текущая роль: {roleLabels[currentRole]}
           </StatusPill>
           <p className="hero-card__summary">
-            Интерфейс построен как основа для курсового проекта по критериям из
-            `docx`: есть маршруты, формы, валидация, разные роли, уведомления и
-            архитектура, которую можно безболезненно расширить backend-частью.
+            Проект уже работает как цельная система: публичные разделы доступны без
+            входа, а защищенные маршруты открываются только после авторизации. Новые
+            спортсмены и родители могут зарегистрироваться прямо из интерфейса.
           </p>
 
           <div className="hero-card__metrics">
@@ -293,7 +603,7 @@ export function HomePage() {
             </div>
             <div className="hero-card__metric">
               <span className="hero-card__metric-value">{stats.trainingsToday}</span>
-              <span className="hero-card__metric-label">тренировки сегодня</span>
+              <span className="hero-card__metric-label">тренировки на сегодня</span>
             </div>
             <div className="hero-card__metric">
               <span className="hero-card__metric-value">{stats.participantCount}</span>
@@ -330,22 +640,34 @@ export function HomePage() {
         ))}
       </section>
 
+      <div className={`alert alert--${authFeedback.type}`}>{authFeedback.message}</div>
+
       <div className="page-grid page-grid--two">
         <LoginCard
-          key={currentRole}
+          key={`${isAuthenticated ? 'auth' : 'guest'}-${currentRole}`}
           currentRole={currentRole}
-          authFeedback={authFeedback}
+          isAuthenticated={isAuthenticated}
+          isSyncingData={isSyncingData}
           profiles={profiles}
           roleOptions={roleOptions}
           signIn={signIn}
         />
 
+        <RegistrationCard
+          key={isAuthenticated ? 'registration-auth' : 'registration-public'}
+          isAuthenticated={isAuthenticated}
+          isSyncingData={isSyncingData}
+          registerUser={registerUser}
+        />
+      </div>
+
+      <div className="page-grid page-grid--two">
         <section className="card">
           <div className="card__header">
             <div>
-              <h2 className="card__title">Что уже покрыто</h2>
+              <h2 className="card__title">Что уже покрыто в проекте</h2>
               <p className="card__description">
-                Блоки интерфейса, которые уже соответствуют логике курсовой.
+                Базовый функционал курсовой уже доступен в интерфейсе и backend API.
               </p>
             </div>
           </div>
@@ -359,37 +681,42 @@ export function HomePage() {
             <StatCard
               label="Маршруты"
               value="6"
-              hint="от главной до административной панели"
+              hint="с учетом защищенных страниц и административного доступа"
             />
             <StatCard
               label="Формы"
-              value="3"
-              hint="вход, редактирование профиля, перенос тренировки"
+              value="4"
+              hint="вход, регистрация, редактирование профиля, перенос тренировки"
             />
             <StatCard
-              label="Уведомления"
-              value="online"
-              hint="изменения видны сразу после действий"
+              label="Данные"
+              value="API"
+              hint="фронтенд подключен к Express и SQLite"
             />
           </div>
 
           <div className="divider" style={{ margin: '20px 0' }}></div>
 
           <ul className="bullet-list">
-            <li>страницы разделены по маршрутам через `react-router-dom`</li>
-            <li>данные собраны в отдельном слое `data/` и контексте состояния</li>
-            <li>каждое действие пользователя сопровождается понятным сообщением</li>
-            <li>структура готова к следующему этапу: API, БД и настоящая авторизация</li>
+            <li>публичные разделы работают без авторизации и загружаются с сервера</li>
+            <li>личные данные, достижения и посещаемость защищены по ролям</li>
+            <li>административная панель доступна только администратору</li>
+            <li>спортсмен и родитель могут создать новый аккаунт прямо из интерфейса</li>
           </ul>
         </section>
-      </div>
 
-      <ProfileCard
-        key={`${currentRole}-${currentUser.phone}-${currentUser.note}`}
-        currentUser={currentUser}
-        profileFeedback={profileFeedback}
-        updateProfile={updateProfile}
-      />
+        {isAuthenticated ? (
+          <ProfileCard
+            key={currentUser.email}
+            currentUser={currentUser}
+            isSyncingData={isSyncingData}
+            profileFeedback={profileFeedback}
+            updateProfile={updateProfile}
+          />
+        ) : (
+          <GuestCabinetCard />
+        )}
+      </div>
     </>
   )
 }

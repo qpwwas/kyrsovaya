@@ -1,9 +1,9 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { useAppState } from '../../context/useAppState'
+import { roleLabels } from '../../utils/format'
 import { NotificationList } from '../NotificationList'
 import { StatCard } from '../StatCard'
 import { StatusPill } from '../StatusPill'
-import { useAppState } from '../../context/useAppState'
-import { roleLabels } from '../../utils/format'
 
 const navItems = [
   { to: '/', label: 'Главная' },
@@ -102,19 +102,31 @@ export function AppLayout() {
             <section className="sidebar-panel">
               <div className="sidebar-panel__header">
                 <div>
-                  <h2 className="sidebar-panel__title">Активный профиль</h2>
-                  <p className="sidebar-panel__description">{currentUser.fullName}</p>
+                  <h2 className="sidebar-panel__title">
+                    {isAuthenticated ? 'Активный профиль' : 'Гостевой режим'}
+                  </h2>
+                  <p className="sidebar-panel__description">
+                    {isAuthenticated ? currentUser.fullName : roleLabels[currentRole]}
+                  </p>
                 </div>
-                <StatusPill tone={isAuthenticated ? 'success' : 'info'}>
-                  {currentUser.position}
+                <StatusPill tone={isAuthenticated ? 'success' : 'warning'}>
+                  {isAuthenticated ? currentUser.position : 'Без авторизации'}
                 </StatusPill>
               </div>
 
-              <ul className="mini-list">
-                <li>{currentUser.email}</li>
-                <li>{currentUser.phone}</li>
-                <li>{currentUser.emergencyContact}</li>
-              </ul>
+              {isAuthenticated ? (
+                <ul className="mini-list">
+                  <li>{currentUser.email}</li>
+                  <li>{currentUser.phone}</li>
+                  <li>{currentUser.emergencyContact}</li>
+                </ul>
+              ) : (
+                <ul className="mini-list">
+                  <li>доступны публичные секции и расписание тренировок</li>
+                  <li>личные разделы открываются после входа или регистрации</li>
+                  <li>демо-роль можно переключить в верхней панели</li>
+                </ul>
+              )}
             </section>
 
             <section className="sidebar-panel">

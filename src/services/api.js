@@ -27,6 +27,13 @@ export function login(credentials) {
   })
 }
 
+export function registerAccount(payload) {
+  return request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function getCurrentUser(token) {
   return request('/auth/me', {
     headers: {

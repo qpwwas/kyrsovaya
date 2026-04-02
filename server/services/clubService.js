@@ -19,6 +19,66 @@ function parseTags(tagsJson) {
   }
 }
 
+function normalizeText(value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function normalizeEmail(value) {
+  return normalizeText(value).toLowerCase()
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function requireText(value, minLength, message) {
+  const normalizedValue = normalizeText(value)
+
+  if (normalizedValue.length < minLength) {
+    throw createError(400, message)
+  }
+
+  return normalizedValue
+}
+
+function parseAge(value, message) {
+  const age = Number.parseInt(value, 10)
+
+  if (!Number.isInteger(age) || age < 5 || age > 25) {
+    throw createError(400, message)
+  }
+
+  return age
+}
+
+function ensureEmailAvailable(email) {
+  const existingUser = db
+    .prepare('SELECT id FROM users WHERE lower(email) = lower(?) LIMIT 1')
+    .get(email)
+
+  if (existingUser) {
+    throw createError(409, 'Пользователь с таким e-mail уже зарегистрирован.')
+  }
+}
+
+function getNextParticipantId() {
+  const lastParticipant = db
+    .prepare(`
+      SELECT id
+      FROM participants
+      WHERE id LIKE 'ath-%'
+      ORDER BY CAST(substr(id, 5) AS INTEGER) DESC
+      LIMIT 1
+    `)
+    .get()
+
+  const lastNumber = lastParticipant
+    ? Number.parseInt(lastParticipant.id.replace('ath-', ''), 10)
+    : 0
+
+  return `ath-${String(lastNumber + 1).padStart(2, '0')}`
+}
+
 function mapParticipant(row) {
   return {
     id: row.id,
@@ -110,6 +170,156 @@ function getAllowedParticipantIds(user) {
 export function getUserById(userId) {
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(userId)
   return mapUser(row)
+}
+
+export function registerUser(payload) {
+  const role = normalizeText(payload.role)
+  const fullName = requireText(payload.fullName, 3, 'Укажите ФИО пользователя.')
+  const email = normalizeEmail(payload.email)
+  const phone = requireText(payload.phone, 6, 'Укажите контактный телефон.')
+  const emergencyContact = requireText(
+    payload.emergencyContact,
+    3,
+    'Заполните поле экстренной связи.',
+  )
+  const note = normalizeText(payload.note)
+  const password = normalizeText(payload.password)
+
+  if (!['athlete', 'parent'].includes(role)) {
+    throw createError(
+      400,
+      'Самостоятельная регистрация доступна только спортсмену или родителю.',
+    )
+  }
+
+  if (!isValidEmail(email)) {
+    throw createError(400, 'Укажите корректный e-mail.')
+  }
+
+  if (password.length < 6) {
+    throw createError(400, 'Пароль должен содержать не менее 6 символов.')
+  }
+
+  ensureEmailAvailable(email)
+
+  const insertParticipant = db.prepare(`
+    INSERT INTO participants (id, name, age, level, parent_name, focus)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+
+  const insertUser = db.prepare(`
+    INSERT INTO users (
+      role,
+      full_name,
+      email,
+      phone,
+      emergency_contact,
+      note,
+      position,
+      password_hash,
+      athlete_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `)
+
+  const insertParentChild = db.prepare(`
+    INSERT INTO parent_children (user_id, participant_id)
+    VALUES (?, ?)
+  `)
+
+  const passwordHash = bcrypt.hashSync(password, 10)
+
+  const registerTransaction = db.transaction(() => {
+    if (role === 'athlete') {
+      const parentName = requireText(
+        payload.parentName,
+        3,
+        'Укажите имя родителя или законного представителя.',
+      )
+      const athleteAge = parseAge(
+        payload.athleteAge,
+        'Возраст спортсмена должен быть числом от 5 до 25.',
+      )
+      const athleteLevel = requireText(
+        payload.athleteLevel,
+        2,
+        'Укажите уровень подготовки спортсмена.',
+      )
+      const athleteFocus = requireText(
+        payload.athleteFocus,
+        3,
+        'Укажите спортивное направление или цель.',
+      )
+      const participantId = getNextParticipantId()
+
+      insertParticipant.run(
+        participantId,
+        fullName,
+        athleteAge,
+        athleteLevel,
+        parentName,
+        athleteFocus,
+      )
+
+      const result = insertUser.run(
+        role,
+        fullName,
+        email,
+        phone,
+        emergencyContact,
+        note,
+        'Спортсмен',
+        passwordHash,
+        participantId,
+      )
+
+      return Number(result.lastInsertRowid)
+    }
+
+    const childName = requireText(payload.childName, 3, 'Укажите имя ребенка.')
+    const childAge = parseAge(
+      payload.childAge,
+      'Возраст ребенка должен быть числом от 5 до 25.',
+    )
+    const childLevel = requireText(
+      payload.childLevel,
+      2,
+      'Укажите уровень подготовки ребенка.',
+    )
+    const childFocus = requireText(
+      payload.childFocus,
+      3,
+      'Укажите направление подготовки ребенка.',
+    )
+    const participantId = getNextParticipantId()
+
+    insertParticipant.run(
+      participantId,
+      childName,
+      childAge,
+      childLevel,
+      fullName,
+      childFocus,
+    )
+
+    const result = insertUser.run(
+      role,
+      fullName,
+      email,
+      phone,
+      emergencyContact,
+      note,
+      'Родитель',
+      passwordHash,
+      null,
+    )
+
+    insertParentChild.run(result.lastInsertRowid, participantId)
+
+    return Number(result.lastInsertRowid)
+  })
+
+  const userId = registerTransaction()
+  return getUserById(userId)
 }
 
 export function updateCurrentUser(userId, payload) {

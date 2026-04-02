@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { authenticateRequest, createToken } from '../middleware/auth.js'
 import {
   authenticateCredentials,
+  registerUser,
   updateCurrentUser,
 } from '../services/clubService.js'
 
@@ -22,6 +23,21 @@ authRouter.post('/login', (request, response, next) => {
     const token = createToken(user)
 
     response.json({
+      token,
+      user,
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+authRouter.post('/register', (request, response, next) => {
+  try {
+    const user = registerUser(request.body ?? {})
+    const token = createToken(user)
+
+    response.status(201).json({
+      message: 'Аккаунт успешно создан.',
       token,
       user,
     })

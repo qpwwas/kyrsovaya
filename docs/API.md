@@ -6,19 +6,17 @@
 http://localhost:3001/api
 ```
 
-## Authentication
+## Аутентификация
 
-Protected endpoints use Bearer token authentication.
-
-Example header:
+Защищенные маршруты используют Bearer token:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-## Demo credentials
+## Демо-аккаунты
 
-All demo users use the same password:
+Общий пароль:
 
 ```text
 sport2026
@@ -29,13 +27,13 @@ sport2026
 - `athlete@sport.local`
 - `parent@sport.local`
 
-## Endpoints
+## Маршруты
 
 ### `GET /health`
 
-Checks that the API is running.
+Проверка, что API запущен.
 
-Response:
+Пример ответа:
 
 ```json
 {
@@ -46,9 +44,9 @@ Response:
 
 ### `POST /auth/login`
 
-Authorizes a user and returns a JWT token.
+Авторизация пользователя.
 
-Request:
+Пример запроса:
 
 ```json
 {
@@ -57,7 +55,7 @@ Request:
 }
 ```
 
-Response:
+Пример ответа:
 
 ```json
 {
@@ -77,34 +75,97 @@ Response:
 }
 ```
 
+### `POST /auth/register`
+
+Публичная регистрация нового пользователя.
+
+Разрешенные роли:
+
+- `athlete`
+- `parent`
+
+Пример регистрации спортсмена:
+
+```json
+{
+  "role": "athlete",
+  "fullName": "Илья Петров",
+  "email": "petrov@sport.local",
+  "phone": "+7 (900) 123-45-67",
+  "emergencyContact": "Ольга Петрова, +7 (900) 111-22-33",
+  "password": "secret12",
+  "note": "Готовится к сезону",
+  "parentName": "Ольга Петрова",
+  "athleteAge": 12,
+  "athleteLevel": "Начальный",
+  "athleteFocus": "Плавание"
+}
+```
+
+Пример регистрации родителя:
+
+```json
+{
+  "role": "parent",
+  "fullName": "Марина Соколова",
+  "email": "sokolova@sport.local",
+  "phone": "+7 (900) 765-43-21",
+  "emergencyContact": "Резервный контакт, +7 (900) 999-88-77",
+  "password": "secret12",
+  "note": "Просит уведомлять о переносах",
+  "childName": "Есения Соколова",
+  "childAge": 10,
+  "childLevel": "Начальный",
+  "childFocus": "Гимнастика"
+}
+```
+
+Успешный ответ:
+
+```json
+{
+  "message": "Аккаунт успешно создан.",
+  "token": "<jwt>",
+  "user": {
+    "id": 5,
+    "role": "athlete"
+  }
+}
+```
+
 ### `GET /auth/me`
 
-Returns the current authenticated user.
+Возвращает текущего авторизованного пользователя.
 
 ### `PATCH /auth/me`
 
-Updates the current authenticated user profile.
+Обновляет профиль текущего пользователя.
 
-Request body:
+Пример тела запроса:
 
 ```json
 {
   "fullName": "Екатерина Смирнова",
   "phone": "+7 (701) 555-10-01",
   "emergencyContact": "Дежурный администратор, +7 (701) 555-10-99",
-  "note": "Контролирует загрузку залов и публикует срочные объявления."
+  "note": "Контроль занятости залов и уведомлений."
 }
 ```
 
 ### `GET /sections`
 
-Returns all sports sections with capacity and participant counters.
+Возвращает список спортивных секций с вместимостью и количеством участников.
 
 ### `POST /sections/:sectionId/enroll`
 
-Creates a section enrollment for an athlete or a parent account.
+Запись в секцию.
 
-Request body:
+Доступ:
+
+- `athlete` может записывать только самого себя;
+- `parent` может записывать только привязанного ребенка.
+
+Пример тела:
 
 ```json
 {
@@ -112,20 +173,20 @@ Request body:
 }
 ```
 
-Notes:
-
-- `athlete` can enroll only their own athlete profile
-- `parent` can enroll only managed children
-
 ### `GET /schedule`
 
-Returns the training schedule with hall, coach, and occupancy data.
+Возвращает расписание тренировок.
 
 ### `PATCH /schedule/:sessionId`
 
-Moves a training session to a new slot.
+Изменяет время и зал тренировки.
 
-Request body:
+Доступ:
+
+- `admin`
+- `coach`
+
+Пример тела:
 
 ```json
 {
@@ -134,38 +195,36 @@ Request body:
 }
 ```
 
-Allowed roles:
+API проверяет конфликты по тренеру и залу.
+
+### `GET /participants`
+
+Возвращает участников в зависимости от роли:
+
+- `admin` и `coach` получают полный список;
+- `athlete` получает только свой профиль;
+- `parent` получает только привязанного ребенка.
+
+### `GET /attendance`
+
+Возвращает журнал посещаемости с учетом роли пользователя.
+
+### `PATCH /attendance/:sessionId`
+
+Обновляет статус посещаемости одного участника.
+
+Доступ:
 
 - `admin`
 - `coach`
 
-The API checks conflicts by hall and by coach.
+Допустимые статусы:
 
-### `GET /participants`
+- `present`
+- `late`
+- `absent`
 
-Returns participants available for the current role.
-
-Visibility rules:
-
-- `admin` and `coach` receive the full list
-- `athlete` receives only their own profile
-- `parent` receives only linked children
-
-### `GET /attendance`
-
-Returns attendance registers.
-
-Visibility rules:
-
-- `admin` and `coach` see all registers
-- `athlete` sees only their own attendance
-- `parent` sees only linked children attendance
-
-### `PATCH /attendance/:sessionId`
-
-Updates attendance status for one athlete.
-
-Request body:
+Пример тела:
 
 ```json
 {
@@ -174,28 +233,17 @@ Request body:
 }
 ```
 
-Allowed statuses:
-
-- `present`
-- `late`
-- `absent`
-
-Allowed roles:
-
-- `admin`
-- `coach`
-
 ### `GET /achievements`
 
-Returns achievements filtered by user role.
+Возвращает достижения спортсменов с фильтрацией по роли пользователя.
 
 ### `GET /dashboard/stats`
 
-Returns administrative statistics:
+Возвращает административную статистику:
 
-- total sections
-- total coaches
-- total participants
-- trainings today
-- today sessions
-- coach load
+- количество секций;
+- количество тренеров;
+- количество участников;
+- количество тренировок на текущую дату;
+- список тренировок на день;
+- нагрузку по тренерам.

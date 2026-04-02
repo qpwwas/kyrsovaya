@@ -14,12 +14,13 @@ import {
   getSchedule,
   getSections,
   login,
+  registerAccount as createAccount,
   updateAttendanceMark,
   updateCurrentUser as saveCurrentUser,
   updateScheduleSession,
 } from '../services/api'
-import { AppStateContext } from './appStateShared'
 import { roleLabels } from '../utils/format'
+import { AppStateContext } from './appStateShared'
 
 const TOKEN_STORAGE_KEY = 'sportspace.auth.token'
 
@@ -34,7 +35,7 @@ function getTodayKey() {
 function getDefaultAuthFeedback() {
   return createFeedback(
     'info',
-    'Секции и расписание загружаются с сервера. Для личных разделов выполните вход под одной из ролей.',
+    'Секции и расписание загружаются с сервера. Для личных разделов выполните вход или зарегистрируйте аккаунт спортсмена либо родителя.',
   )
 }
 
@@ -64,6 +65,10 @@ function writeStoredToken(token) {
   }
 
   window.localStorage.removeItem(TOKEN_STORAGE_KEY)
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
 export function AppStateProvider({ children }) {
@@ -184,6 +189,7 @@ export function AppStateProvider({ children }) {
           'Сессия истекла. Выполните вход снова, чтобы продолжить работу с личными данными.',
       ),
     )
+    setProfileFeedback(getDefaultProfileFeedback())
     setNotifications(initialNotifications)
     return true
   }
@@ -233,6 +239,7 @@ export function AppStateProvider({ children }) {
         setAuthenticatedUser(user)
         setSelectedRole(user.role)
         applyProtectedCollections(protectedCollections)
+        setProfileFeedback(getDefaultProfileFeedback())
         setAuthFeedback(
           createFeedback(
             'success',
@@ -251,6 +258,7 @@ export function AppStateProvider({ children }) {
           setSelectedRole('admin')
           clearProtectedCollections()
           setNotifications(initialNotifications)
+          setProfileFeedback(getDefaultProfileFeedback())
           setAuthFeedback(
             createFeedback(
               'warning',
@@ -311,12 +319,13 @@ export function AppStateProvider({ children }) {
     const normalizedEmail = email.trim().toLowerCase()
 
     if (!profiles[role]) {
-      const message = 'Выберите роль пользователя, чтобы открыть нужный сценарий.'
+      const message =
+        'Выберите роль пользователя, чтобы открыть нужный сценарий входа.'
       setAuthFeedback(createFeedback('error', message))
       return { ok: false, message }
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    if (!isValidEmail(normalizedEmail)) {
       const message = 'Укажите корректный e-mail для входа в систему.'
       setAuthFeedback(createFeedback('error', message))
       return { ok: false, message }
@@ -347,6 +356,7 @@ export function AppStateProvider({ children }) {
       setSelectedRole(user.role)
       applyPublicCollections(publicCollections)
       applyProtectedCollections(protectedCollections)
+      setProfileFeedback(getDefaultProfileFeedback())
 
       const roleMessage =
         user.role === role
@@ -364,6 +374,77 @@ export function AppStateProvider({ children }) {
       return { ok: true, message: roleMessage }
     } catch (error) {
       const message = error.message ?? 'Не удалось выполнить вход через API.'
+      setAuthFeedback(createFeedback('error', message))
+      return { ok: false, message }
+    } finally {
+      setIsSyncingData(false)
+    }
+  }
+
+  async function registerUser(payload) {
+    const normalizedEmail = payload.email.trim().toLowerCase()
+    const role = payload.role
+
+    if (!['athlete', 'parent'].includes(role)) {
+      const message = 'Для регистрации выберите роль спортсмена или родителя.'
+      setAuthFeedback(createFeedback('error', message))
+      return { ok: false, message }
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+      const message = 'Укажите корректный e-mail для регистрации.'
+      setAuthFeedback(createFeedback('error', message))
+      return { ok: false, message }
+    }
+
+    if (payload.password.trim().length < 6) {
+      const message = 'Пароль должен содержать не менее 6 символов.'
+      setAuthFeedback(createFeedback('error', message))
+      return { ok: false, message }
+    }
+
+    setIsSyncingData(true)
+
+    try {
+      const { token: nextToken, user } = await createAccount({
+        ...payload,
+        email: normalizedEmail,
+      })
+
+      const [publicCollections, protectedCollections] = await Promise.all([
+        loadPublicCollections(),
+        loadProtectedCollections(nextToken),
+      ])
+
+      writeStoredToken(nextToken)
+      setToken(nextToken)
+      setAuthenticatedUser(user)
+      setSelectedRole(user.role)
+      applyPublicCollections(publicCollections)
+      applyProtectedCollections(protectedCollections)
+      setProfileFeedback(
+        createFeedback(
+          'success',
+          'Аккаунт создан. При необходимости сразу отредактируйте контактные данные в личном кабинете.',
+        ),
+      )
+
+      const successMessage =
+        user.role === 'athlete'
+          ? 'Регистрация завершена. Профиль спортсмена создан и готов к записи в секции.'
+          : 'Регистрация завершена. Профиль родителя создан, ребенок добавлен в систему.'
+
+      setAuthFeedback(createFeedback('success', successMessage))
+      pushNotification(
+        'Аккаунт создан',
+        `Зарегистрирован новый пользователь с ролью "${roleLabels[user.role]}".`,
+        'success',
+        'регистрация',
+      )
+
+      return { ok: true, message: successMessage }
+    } catch (error) {
+      const message = error.message ?? 'Не удалось зарегистрировать новый аккаунт.'
       setAuthFeedback(createFeedback('error', message))
       return { ok: false, message }
     } finally {
@@ -460,7 +541,8 @@ export function AppStateProvider({ children }) {
 
   async function rescheduleSession(sessionId, payload) {
     if (!isAuthenticated || !token || !authenticatedUser) {
-      const message = 'Чтобы изменить расписание, выполните вход как администратор или тренер.'
+      const message =
+        'Чтобы изменить расписание, выполните вход как администратор или тренер.'
       pushNotification('Нет доступа', message, 'warning', 'расписание')
       return { ok: false, message }
     }
@@ -489,7 +571,8 @@ export function AppStateProvider({ children }) {
 
   async function markAttendance(sessionId, participantId, status) {
     if (!isAuthenticated || !token || !authenticatedUser) {
-      const message = 'Чтобы отмечать посещаемость, выполните вход как администратор или тренер.'
+      const message =
+        'Чтобы отмечать посещаемость, выполните вход как администратор или тренер.'
       pushNotification('Нет доступа', message, 'warning', 'посещаемость')
       return { ok: false, message }
     }
@@ -566,6 +649,7 @@ export function AppStateProvider({ children }) {
     authFeedback,
     currentRole,
     currentUser,
+    enrollInSection,
     getAttendanceRate,
     halls: halls.length ? halls : fallbackHalls,
     isAuthenticated,
@@ -578,6 +662,7 @@ export function AppStateProvider({ children }) {
     participantsById,
     profileFeedback,
     profiles,
+    registerUser,
     rescheduleSession,
     roleOptions,
     schedule,
@@ -589,7 +674,6 @@ export function AppStateProvider({ children }) {
     stats,
     token,
     updateProfile,
-    enrollInSection,
   }
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

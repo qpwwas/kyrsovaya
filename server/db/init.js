@@ -9,11 +9,91 @@ import {
 } from '../../src/data/mockData.js'
 import { db } from './client.js'
 
+function migrateUsersSchema() {
+  const usersTable = db
+    .prepare(`
+      SELECT sql
+      FROM sqlite_master
+      WHERE type = 'table' AND name = 'users'
+    `)
+    .get()
+
+  if (!usersTable?.sql?.includes('role TEXT NOT NULL UNIQUE')) {
+    return
+  }
+
+  db.pragma('foreign_keys = OFF')
+
+  const migration = db.transaction(() => {
+    db.exec(`
+      ALTER TABLE parent_children RENAME TO parent_children_old;
+      ALTER TABLE users RENAME TO users_old;
+
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT NOT NULL,
+        full_name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        phone TEXT NOT NULL,
+        emergency_contact TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT '',
+        position TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        athlete_id TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      INSERT INTO users (
+        id,
+        role,
+        full_name,
+        email,
+        phone,
+        emergency_contact,
+        note,
+        position,
+        password_hash,
+        athlete_id
+      )
+      SELECT
+        id,
+        role,
+        full_name,
+        email,
+        phone,
+        emergency_contact,
+        note,
+        position,
+        password_hash,
+        athlete_id
+      FROM users_old;
+
+      CREATE TABLE parent_children (
+        user_id INTEGER NOT NULL,
+        participant_id TEXT NOT NULL,
+        PRIMARY KEY (user_id, participant_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      INSERT INTO parent_children (user_id, participant_id)
+      SELECT user_id, participant_id
+      FROM parent_children_old;
+
+      DROP TABLE parent_children_old;
+      DROP TABLE users_old;
+    `)
+  })
+
+  migration()
+
+  db.pragma('foreign_keys = ON')
+}
+
 function createTables() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      role TEXT NOT NULL UNIQUE,
+      role TEXT NOT NULL,
       full_name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       phone TEXT NOT NULL,
@@ -21,7 +101,8 @@ function createTables() {
       note TEXT NOT NULL DEFAULT '',
       position TEXT NOT NULL,
       password_hash TEXT NOT NULL,
-      athlete_id TEXT
+      athlete_id TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS parent_children (
@@ -263,6 +344,7 @@ function seedDatabase() {
 }
 
 export function ensureDatabaseReady() {
+  migrateUsersSchema()
   createTables()
   seedDatabase()
 }
