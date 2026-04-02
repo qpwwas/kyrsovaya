@@ -8,7 +8,7 @@ dashboardRouter.get(
   '/stats',
   authenticateRequest,
   requireRoles('admin', 'coach'),
-  (_request, response) => {
-    response.json(getDashboardStats())
+  async (_request, response) => {
+    response.json(await getDashboardStats())
   },
 )

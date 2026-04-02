@@ -8,13 +8,15 @@
 npm run server
 ```
 
-2. Запустить frontend:
+2. Убедиться, что доступна MongoDB по `MONGODB_URI`.
+
+3. Запустить frontend:
 
 ```bash
 npm run dev
 ```
 
-3. Открыть приложение в браузере.
+4. Открыть приложение в браузере.
 
 ## Сценарий 1. Health check API
 

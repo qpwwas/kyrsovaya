@@ -4,10 +4,17 @@ import { ensureDatabaseReady } from './db/init.js'
 const port = Number(process.env.PORT ?? 3001)
 const host = process.env.HOST ?? '0.0.0.0'
 
-ensureDatabaseReady()
+async function bootstrap() {
+  await ensureDatabaseReady()
 
-const app = createApp()
+  const app = createApp()
 
-app.listen(port, host, () => {
-  console.log(`SportSpace is running on http://${host}:${port}`)
+  app.listen(port, host, () => {
+    console.log(`SportSpace is running on http://${host}:${port}`)
+  })
+}
+
+bootstrap().catch((error) => {
+  console.error('Failed to start SportSpace with MongoDB:', error)
+  process.exit(1)
 })

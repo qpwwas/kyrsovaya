@@ -691,7 +691,7 @@ export function HomePage() {
             <StatCard
               label="Данные"
               value="API"
-              hint="фронтенд подключен к Express и SQLite"
+              hint="фронтенд подключен к Express и MongoDB"
             />
           </div>
 

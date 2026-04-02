@@ -20,7 +20,7 @@ export function createToken(user) {
   )
 }
 
-export function authenticateRequest(request, _response, next) {
+export async function authenticateRequest(request, _response, next) {
   try {
     const authorizationHeader = request.headers.authorization ?? ''
     const token = authorizationHeader.startsWith('Bearer ')
@@ -32,7 +32,7 @@ export function authenticateRequest(request, _response, next) {
     }
 
     const payload = jwt.verify(token, JWT_SECRET)
-    const user = getUserById(payload.sub)
+    const user = await getUserById(payload.sub)
 
     if (!user) {
       throw createError(401, 'Пользователь для токена не найден.')

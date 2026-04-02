@@ -8,42 +8,34 @@ import {
 
 export const authRouter = Router()
 
-authRouter.post('/login', (request, response, next) => {
-  try {
-    const { email = '', password = '' } = request.body ?? {}
+authRouter.post('/login', async (request, response) => {
+  const { email = '', password = '' } = request.body ?? {}
 
-    if (!email.trim() || !password.trim()) {
-      response.status(400).json({
-        message: 'Укажите e-mail и пароль.',
-      })
-      return
-    }
-
-    const user = authenticateCredentials(email.trim(), password)
-    const token = createToken(user)
-
-    response.json({
-      token,
-      user,
+  if (!email.trim() || !password.trim()) {
+    response.status(400).json({
+      message: 'Укажите e-mail и пароль.',
     })
-  } catch (error) {
-    next(error)
+    return
   }
+
+  const user = await authenticateCredentials(email.trim(), password)
+  const token = createToken(user)
+
+  response.json({
+    token,
+    user,
+  })
 })
 
-authRouter.post('/register', (request, response, next) => {
-  try {
-    const user = registerUser(request.body ?? {})
-    const token = createToken(user)
+authRouter.post('/register', async (request, response) => {
+  const user = await registerUser(request.body ?? {})
+  const token = createToken(user)
 
-    response.status(201).json({
-      message: 'Аккаунт успешно создан.',
-      token,
-      user,
-    })
-  } catch (error) {
-    next(error)
-  }
+  response.status(201).json({
+    message: 'Аккаунт успешно создан.',
+    token,
+    user,
+  })
 })
 
 authRouter.get('/me', authenticateRequest, (request, response) => {
@@ -52,15 +44,11 @@ authRouter.get('/me', authenticateRequest, (request, response) => {
   })
 })
 
-authRouter.patch('/me', authenticateRequest, (request, response, next) => {
-  try {
-    const user = updateCurrentUser(request.user.id, request.body ?? {})
+authRouter.patch('/me', authenticateRequest, async (request, response) => {
+  const user = await updateCurrentUser(request.user.id, request.body ?? {})
 
-    response.json({
-      message: 'Профиль обновлен.',
-      user,
-    })
-  } catch (error) {
-    next(error)
-  }
+  response.json({
+    message: 'Профиль обновлен.',
+    user,
+  })
 })

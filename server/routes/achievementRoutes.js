@@ -4,8 +4,8 @@ import { listAchievements } from '../services/clubService.js'
 
 export const achievementRouter = Router()
 
-achievementRouter.get('/', authenticateRequest, (request, response) => {
+achievementRouter.get('/', authenticateRequest, async (request, response) => {
   response.json({
-    achievements: listAchievements(request.user),
+    achievements: await listAchievements(request.user),
   })
 })

@@ -1,22 +1,17 @@
 import bcrypt from 'bcryptjs'
-import { db } from '../db/client.js'
+import {
+  Achievement,
+  Attendance,
+  Participant,
+  Schedule,
+  Section,
+  User,
+} from '../db/models.js'
 
 function createError(statusCode, message) {
   const error = new Error(message)
   error.statusCode = statusCode
   return error
-}
-
-function parseCsvList(csvValue) {
-  return csvValue ? csvValue.split(',').filter(Boolean) : []
-}
-
-function parseTags(tagsJson) {
-  try {
-    return JSON.parse(tagsJson)
-  } catch {
-    return []
-  }
 }
 
 function normalizeText(value) {
@@ -51,53 +46,58 @@ function parseAge(value, message) {
   return age
 }
 
-function ensureEmailAvailable(email) {
-  const existingUser = db
-    .prepare('SELECT id FROM users WHERE lower(email) = lower(?) LIMIT 1')
-    .get(email)
+async function ensureEmailAvailable(email) {
+  const existingUser = await User.exists({ email })
 
   if (existingUser) {
     throw createError(409, 'Пользователь с таким e-mail уже зарегистрирован.')
   }
 }
 
-function getNextParticipantId() {
-  const lastParticipant = db
-    .prepare(`
-      SELECT id
-      FROM participants
-      WHERE id LIKE 'ath-%'
-      ORDER BY CAST(substr(id, 5) AS INTEGER) DESC
-      LIMIT 1
-    `)
-    .get()
+async function getNextParticipantId() {
+  const [lastParticipant] = await Participant.aggregate([
+    {
+      $match: {
+        _id: /^ath-\d+$/,
+      },
+    },
+    {
+      $addFields: {
+        numericId: {
+          $toInt: {
+            $arrayElemAt: [{ $split: ['$_id', '-'] }, 1],
+          },
+        },
+      },
+    },
+    {
+      $sort: {
+        numericId: -1,
+      },
+    },
+    {
+      $limit: 1,
+    },
+  ])
 
-  const lastNumber = lastParticipant
-    ? Number.parseInt(lastParticipant.id.replace('ath-', ''), 10)
-    : 0
-
+  const lastNumber = lastParticipant?.numericId ?? 0
   return `ath-${String(lastNumber + 1).padStart(2, '0')}`
 }
 
 function mapParticipant(row) {
+  if (!row) {
+    return null
+  }
+
   return {
-    id: row.id,
+    id: row._id,
     name: row.name,
     age: row.age,
     level: row.level,
-    parentName: row.parent_name,
+    parentName: row.parentName,
     focus: row.focus,
-    sectionIds: parseCsvList(row.section_ids),
+    sectionIds: row.sectionIds ?? [],
   }
-}
-
-function getManagedAthletes(userId) {
-  return db
-    .prepare(
-      'SELECT participant_id FROM parent_children WHERE user_id = ? ORDER BY participant_id',
-    )
-    .all(userId)
-    .map((row) => row.participant_id)
 }
 
 function mapUser(row) {
@@ -106,52 +106,56 @@ function mapUser(row) {
   }
 
   return {
-    id: row.id,
+    id: String(row._id),
     role: row.role,
-    fullName: row.full_name,
+    fullName: row.fullName,
     email: row.email,
     phone: row.phone,
-    emergencyContact: row.emergency_contact,
+    emergencyContact: row.emergencyContact,
     note: row.note,
     position: row.position,
-    athleteId: row.athlete_id ?? null,
-    managedAthletes: row.role === 'parent' ? getManagedAthletes(row.id) : [],
+    athleteId: row.athleteId ?? null,
+    managedAthletes: row.role === 'parent' ? row.managedAthletes ?? [] : [],
   }
 }
 
 function mapSection(row) {
+  const participantIds = row.participantIds ?? []
+
   return {
-    id: row.id,
+    id: row._id,
     name: row.name,
     description: row.description,
     coach: row.coach,
     hall: row.hall,
-    ageGroup: row.age_group,
+    ageGroup: row.ageGroup,
     level: row.level,
-    tags: parseTags(row.tags_json),
+    tags: row.tags ?? [],
     capacity: row.capacity,
-    scheduleSummary: row.schedule_summary,
-    statusLabel: row.status_label,
-    statusTone: row.status_tone,
-    participantsCount: row.participants_count,
-    participantIds: parseCsvList(row.participant_ids),
+    scheduleSummary: row.scheduleSummary,
+    statusLabel: row.statusLabel,
+    statusTone: row.statusTone,
+    participantsCount: participantIds.length,
+    participantIds,
   }
 }
 
-function mapSchedule(row) {
+function mapSchedule(row, section) {
+  const participantIds = section?.participantIds ?? []
+
   return {
-    id: row.id,
-    sectionId: row.section_id,
-    sectionName: row.section_name,
+    id: row._id,
+    sectionId: row.sectionId,
+    sectionName: row.sectionName,
     coach: row.coach,
     hall: row.hall,
-    dateTime: row.date_time,
+    dateTime: row.dateTime,
     format: row.format,
     note: row.note,
-    statusLabel: row.status_label,
-    statusTone: row.status_tone,
-    participantsCount: row.participants_count,
-    capacity: row.capacity,
+    statusLabel: row.statusLabel,
+    statusTone: row.statusTone,
+    participantsCount: participantIds.length,
+    capacity: section?.capacity ?? 0,
   }
 }
 
@@ -161,18 +165,18 @@ function getAllowedParticipantIds(user) {
   }
 
   if (user.role === 'parent') {
-    return user.managedAthletes
+    return user.managedAthletes ?? []
   }
 
   return []
 }
 
-export function getUserById(userId) {
-  const row = db.prepare('SELECT * FROM users WHERE id = ?').get(userId)
+export async function getUserById(userId) {
+  const row = await User.findById(userId).lean()
   return mapUser(row)
 }
 
-export function registerUser(payload) {
+export async function registerUser(payload) {
   const role = normalizeText(payload.role)
   const fullName = requireText(payload.fullName, 3, 'Укажите ФИО пользователя.')
   const email = normalizeEmail(payload.email)
@@ -200,133 +204,106 @@ export function registerUser(payload) {
     throw createError(400, 'Пароль должен содержать не менее 6 символов.')
   }
 
-  ensureEmailAvailable(email)
-
-  const insertParticipant = db.prepare(`
-    INSERT INTO participants (id, name, age, level, parent_name, focus)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `)
-
-  const insertUser = db.prepare(`
-    INSERT INTO users (
-      role,
-      full_name,
-      email,
-      phone,
-      emergency_contact,
-      note,
-      position,
-      password_hash,
-      athlete_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `)
-
-  const insertParentChild = db.prepare(`
-    INSERT INTO parent_children (user_id, participant_id)
-    VALUES (?, ?)
-  `)
+  await ensureEmailAvailable(email)
 
   const passwordHash = bcrypt.hashSync(password, 10)
 
-  const registerTransaction = db.transaction(() => {
-    if (role === 'athlete') {
-      const parentName = requireText(
-        payload.parentName,
-        3,
-        'Укажите имя родителя или законного представителя.',
-      )
-      const athleteAge = parseAge(
-        payload.athleteAge,
-        'Возраст спортсмена должен быть числом от 5 до 25.',
-      )
-      const athleteLevel = requireText(
-        payload.athleteLevel,
-        2,
-        'Укажите уровень подготовки спортсмена.',
-      )
-      const athleteFocus = requireText(
-        payload.athleteFocus,
-        3,
-        'Укажите спортивное направление или цель.',
-      )
-      const participantId = getNextParticipantId()
-
-      insertParticipant.run(
-        participantId,
-        fullName,
-        athleteAge,
-        athleteLevel,
-        parentName,
-        athleteFocus,
-      )
-
-      const result = insertUser.run(
-        role,
-        fullName,
-        email,
-        phone,
-        emergencyContact,
-        note,
-        'Спортсмен',
-        passwordHash,
-        participantId,
-      )
-
-      return Number(result.lastInsertRowid)
-    }
-
-    const childName = requireText(payload.childName, 3, 'Укажите имя ребенка.')
-    const childAge = parseAge(
-      payload.childAge,
-      'Возраст ребенка должен быть числом от 5 до 25.',
-    )
-    const childLevel = requireText(
-      payload.childLevel,
-      2,
-      'Укажите уровень подготовки ребенка.',
-    )
-    const childFocus = requireText(
-      payload.childFocus,
+  if (role === 'athlete') {
+    const parentName = requireText(
+      payload.parentName,
       3,
-      'Укажите направление подготовки ребенка.',
+      'Укажите имя родителя или законного представителя.',
     )
-    const participantId = getNextParticipantId()
-
-    insertParticipant.run(
-      participantId,
-      childName,
-      childAge,
-      childLevel,
-      fullName,
-      childFocus,
+    const athleteAge = parseAge(
+      payload.athleteAge,
+      'Возраст спортсмена должен быть числом от 5 до 25.',
     )
+    const athleteLevel = requireText(
+      payload.athleteLevel,
+      2,
+      'Укажите уровень подготовки спортсмена.',
+    )
+    const athleteFocus = requireText(
+      payload.athleteFocus,
+      3,
+      'Укажите спортивное направление или цель.',
+    )
+    const participantId = await getNextParticipantId()
 
-    const result = insertUser.run(
+    await Participant.create({
+      _id: participantId,
+      name: fullName,
+      age: athleteAge,
+      level: athleteLevel,
+      parentName,
+      focus: athleteFocus,
+      sectionIds: [],
+    })
+
+    const user = await User.create({
       role,
       fullName,
       email,
       phone,
       emergencyContact,
       note,
-      'Родитель',
+      position: 'Спортсмен',
       passwordHash,
-      null,
-    )
+      athleteId: participantId,
+      managedAthletes: [],
+    })
 
-    insertParentChild.run(result.lastInsertRowid, participantId)
+    return mapUser(user.toObject())
+  }
 
-    return Number(result.lastInsertRowid)
+  const childName = requireText(payload.childName, 3, 'Укажите имя ребенка.')
+  const childAge = parseAge(
+    payload.childAge,
+    'Возраст ребенка должен быть числом от 5 до 25.',
+  )
+  const childLevel = requireText(
+    payload.childLevel,
+    2,
+    'Укажите уровень подготовки ребенка.',
+  )
+  const childFocus = requireText(
+    payload.childFocus,
+    3,
+    'Укажите направление подготовки ребенка.',
+  )
+  const participantId = await getNextParticipantId()
+
+  await Participant.create({
+    _id: participantId,
+    name: childName,
+    age: childAge,
+    level: childLevel,
+    parentName: fullName,
+    focus: childFocus,
+    sectionIds: [],
   })
 
-  const userId = registerTransaction()
-  return getUserById(userId)
+  const user = await User.create({
+    role,
+    fullName,
+    email,
+    phone,
+    emergencyContact,
+    note,
+    position: 'Родитель',
+    passwordHash,
+    athleteId: null,
+    managedAthletes: [participantId],
+  })
+
+  return mapUser(user.toObject())
 }
 
-export function updateCurrentUser(userId, payload) {
-  const fullName = payload.fullName?.trim() ?? ''
-  const phone = payload.phone?.trim() ?? ''
-  const emergencyContact = payload.emergencyContact?.trim() ?? ''
-  const note = payload.note?.trim() ?? ''
+export async function updateCurrentUser(userId, payload) {
+  const fullName = normalizeText(payload.fullName)
+  const phone = normalizeText(payload.phone)
+  const emergencyContact = normalizeText(payload.emergencyContact)
+  const note = normalizeText(payload.note)
 
   if (fullName.length < 3) {
     throw createError(400, 'ФИО должно содержать не менее 3 символов.')
@@ -340,28 +317,35 @@ export function updateCurrentUser(userId, payload) {
     throw createError(400, 'Заполните поле для экстренной связи.')
   }
 
-  db.prepare(`
-    UPDATE users
-    SET full_name = ?,
-        phone = ?,
-        emergency_contact = ?,
-        note = ?
-    WHERE id = ?
-  `).run(fullName, phone, emergencyContact, note, userId)
+  const row = await User.findByIdAndUpdate(
+    userId,
+    {
+      fullName,
+      phone,
+      emergencyContact,
+      note,
+    },
+    {
+      new: true,
+      runValidators: true,
+    },
+  ).lean()
 
-  return getUserById(userId)
+  if (!row) {
+    throw createError(404, 'Пользователь не найден.')
+  }
+
+  return mapUser(row)
 }
 
-export function authenticateCredentials(email, password) {
-  const row = db
-    .prepare('SELECT * FROM users WHERE lower(email) = lower(?)')
-    .get(email)
+export async function authenticateCredentials(email, password) {
+  const row = await User.findOne({ email: normalizeEmail(email) }).lean()
 
   if (!row) {
     throw createError(401, 'Такого пользователя не существует.')
   }
 
-  const passwordMatches = bcrypt.compareSync(password, row.password_hash)
+  const passwordMatches = bcrypt.compareSync(password, row.passwordHash)
 
   if (!passwordMatches) {
     throw createError(401, 'Неверный пароль.')
@@ -370,61 +354,41 @@ export function authenticateCredentials(email, password) {
   return mapUser(row)
 }
 
-export function listSections() {
-  const rows = db
-    .prepare(`
-      SELECT
-        s.*,
-        COUNT(sp.participant_id) AS participants_count,
-        GROUP_CONCAT(sp.participant_id) AS participant_ids
-      FROM sections s
-      LEFT JOIN section_participants sp ON sp.section_id = s.id
-      GROUP BY s.id
-      ORDER BY s.name
-    `)
-    .all()
-
+export async function listSections() {
+  const rows = await Section.find().sort({ name: 1 }).lean()
   return rows.map(mapSection)
 }
 
-export function listParticipants(user) {
-  const baseQuery = `
-    SELECT
-      p.id,
-      p.name,
-      p.age,
-      p.level,
-      p.parent_name,
-      p.focus,
-      GROUP_CONCAT(sp.section_id) AS section_ids
-    FROM participants p
-    LEFT JOIN section_participants sp ON sp.participant_id = p.id
-  `
-
-  let rows = []
-
+export async function listParticipants(user) {
   if (user.role === 'athlete' && user.athleteId) {
-    rows = db
-      .prepare(`${baseQuery} WHERE p.id = ? GROUP BY p.id ORDER BY p.name`)
-      .all(user.athleteId)
-  } else if (user.role === 'parent' && user.managedAthletes.length) {
-    const placeholders = user.managedAthletes.map(() => '?').join(', ')
-    rows = db
-      .prepare(
-        `${baseQuery} WHERE p.id IN (${placeholders}) GROUP BY p.id ORDER BY p.name`,
-      )
-      .all(...user.managedAthletes)
-  } else if (user.role === 'parent') {
-    rows = []
-  } else {
-    rows = db.prepare(`${baseQuery} GROUP BY p.id ORDER BY p.name`).all()
+    const row = await Participant.findById(user.athleteId).lean()
+    return row ? [mapParticipant(row)] : []
   }
 
+  if (user.role === 'athlete') {
+    return []
+  }
+
+  if (user.role === 'parent') {
+    if (!user.managedAthletes?.length) {
+      return []
+    }
+
+    const rows = await Participant.find({
+      _id: { $in: user.managedAthletes },
+    })
+      .sort({ name: 1 })
+      .lean()
+
+    return rows.map(mapParticipant)
+  }
+
+  const rows = await Participant.find().sort({ name: 1 }).lean()
   return rows.map(mapParticipant)
 }
 
-export function enrollInSection(user, sectionId, requestedParticipantIds = []) {
-  const section = listSections().find((item) => item.id === sectionId)
+export async function enrollInSection(user, sectionId, requestedParticipantIds = []) {
+  const section = await Section.findById(sectionId).lean()
 
   if (!section) {
     throw createError(404, 'Секция не найдена.')
@@ -447,18 +411,31 @@ export function enrollInSection(user, sectionId, requestedParticipantIds = []) {
   )
 
   if (invalidRequest) {
-    throw createError(403, 'Нельзя записать участника, который не относится к текущему профилю.')
+    throw createError(
+      403,
+      'Нельзя записать участника, который не относится к текущему профилю.',
+    )
+  }
+
+  const existingParticipants = await Participant.find({
+    _id: { $in: participantIds },
+  })
+    .select('_id')
+    .lean()
+
+  if (existingParticipants.length !== participantIds.length) {
+    throw createError(404, 'Один из выбранных спортсменов не найден.')
   }
 
   const missingIds = participantIds.filter(
-    (participantId) => !section.participantIds.includes(participantId),
+    (participantId) => !(section.participantIds ?? []).includes(participantId),
   )
 
   if (!missingIds.length) {
     throw createError(409, 'Указанный спортсмен уже состоит в этой секции.')
   }
 
-  const availableSlots = section.capacity - section.participantsCount
+  const availableSlots = section.capacity - (section.participantIds?.length ?? 0)
 
   if (availableSlots <= 0) {
     throw createError(409, 'В секции нет свободных мест.')
@@ -466,274 +443,295 @@ export function enrollInSection(user, sectionId, requestedParticipantIds = []) {
 
   const idsToInsert = missingIds.slice(0, availableSlots)
 
-  const insertEnrollment = db.prepare(`
-    INSERT INTO section_participants (section_id, participant_id)
-    VALUES (?, ?)
-  `)
+  await Section.updateOne(
+    { _id: sectionId },
+    { $addToSet: { participantIds: { $each: idsToInsert } } },
+  )
 
-  const transaction = db.transaction(() => {
-    for (const participantId of idsToInsert) {
-      insertEnrollment.run(sectionId, participantId)
-    }
-  })
+  await Participant.updateMany(
+    { _id: { $in: idsToInsert } },
+    { $addToSet: { sectionIds: sectionId } },
+  )
 
-  transaction()
-
-  return listSections().find((item) => item.id === sectionId)
+  const updatedSection = await Section.findById(sectionId).lean()
+  return mapSection(updatedSection)
 }
 
-export function listSchedule() {
-  const rows = db
-    .prepare(`
-      SELECT
-        sch.*,
-        sec.capacity AS capacity,
-        COUNT(sp.participant_id) AS participants_count
-      FROM schedule sch
-      JOIN sections sec ON sec.id = sch.section_id
-      LEFT JOIN section_participants sp ON sp.section_id = sec.id
-      GROUP BY sch.id
-      ORDER BY sch.date_time
-    `)
-    .all()
+export async function listSchedule() {
+  const [scheduleRows, sections] = await Promise.all([
+    Schedule.find().sort({ dateTime: 1 }).lean(),
+    Section.find().select('_id capacity participantIds').lean(),
+  ])
 
-  return rows.map(mapSchedule)
+  const sectionMap = new Map(sections.map((section) => [section._id, section]))
+
+  return scheduleRows.map((row) => mapSchedule(row, sectionMap.get(row.sectionId)))
 }
 
-export function rescheduleTraining(user, sessionId, payload) {
+export async function rescheduleTraining(user, sessionId, payload) {
   if (!['admin', 'coach'].includes(user.role)) {
-    throw createError(403, 'Изменение расписания доступно только администратору и тренеру.')
+    throw createError(
+      403,
+      'Изменение расписания доступно только администратору и тренеру.',
+    )
   }
 
   if (!payload.dateTime || !payload.hall) {
     throw createError(400, 'Необходимо указать дату, время и зал.')
   }
 
-  const session = db.prepare('SELECT * FROM schedule WHERE id = ?').get(sessionId)
+  const session = await Schedule.findById(sessionId).lean()
 
   if (!session) {
     throw createError(404, 'Тренировка не найдена.')
   }
 
-  const conflict = db
-    .prepare(`
-      SELECT * FROM schedule
-      WHERE id <> ?
-        AND date_time = ?
-        AND (hall = ? OR coach = ?)
-      LIMIT 1
-    `)
-    .get(sessionId, payload.dateTime, payload.hall, session.coach)
+  const conflict = await Schedule.findOne({
+    _id: { $ne: sessionId },
+    dateTime: payload.dateTime,
+    $or: [{ hall: payload.hall }, { coach: session.coach }],
+  }).lean()
 
   if (conflict) {
     throw createError(
       409,
-      `Конфликт расписания: ${conflict.section_name} уже использует выбранный слот.`,
+      `Конфликт расписания: ${conflict.sectionName} уже использует выбранный слот.`,
     )
   }
 
-  db.prepare(`
-    UPDATE schedule
-    SET date_time = ?,
-        hall = ?,
-        status_label = ?,
-        status_tone = ?,
-        note = ?
-    WHERE id = ?
-  `).run(
-    payload.dateTime,
-    payload.hall,
-    'Обновлено',
-    'warning',
-    `Расписание обновлено. Новый слот: ${payload.dateTime}.`,
-    sessionId,
+  await Schedule.updateOne(
+    { _id: sessionId },
+    {
+      dateTime: payload.dateTime,
+      hall: payload.hall,
+      statusLabel: 'Обновлено',
+      statusTone: 'warning',
+      note: `Расписание обновлено. Новый слот: ${payload.dateTime}.`,
+    },
   )
 
-  return listSchedule().find((item) => item.id === sessionId)
+  const [updatedSession, section] = await Promise.all([
+    Schedule.findById(sessionId).lean(),
+    Section.findById(session.sectionId).select('_id capacity participantIds').lean(),
+  ])
+
+  return mapSchedule(updatedSession, section)
 }
 
-export function listAttendance(user) {
-  const baseQuery = `
-    SELECT
-      att.session_id,
-      sch.section_id,
-      sch.section_name,
-      sch.date_time,
-      att.participant_id,
-      att.status,
-      p.name AS participant_name,
-      p.age,
-      p.parent_name
-    FROM attendance att
-    JOIN schedule sch ON sch.id = att.session_id
-    JOIN participants p ON p.id = att.participant_id
-  `
-
-  let rows = []
+export async function listAttendance(user) {
+  let attendanceFilter = {}
 
   if (user.role === 'athlete' && user.athleteId) {
-    rows = db
-      .prepare(`${baseQuery} WHERE att.participant_id = ? ORDER BY sch.date_time, p.name`)
-      .all(user.athleteId)
-  } else if (user.role === 'parent' && user.managedAthletes.length) {
-    const placeholders = user.managedAthletes.map(() => '?').join(', ')
-    rows = db
-      .prepare(
-        `${baseQuery} WHERE att.participant_id IN (${placeholders}) ORDER BY sch.date_time, p.name`,
-      )
-      .all(...user.managedAthletes)
-  } else {
-    rows = db.prepare(`${baseQuery} ORDER BY sch.date_time, p.name`).all()
+    attendanceFilter = { participantId: user.athleteId }
+  } else if (user.role === 'athlete') {
+    return []
+  } else if (user.role === 'parent' && user.managedAthletes?.length) {
+    attendanceFilter = { participantId: { $in: user.managedAthletes } }
+  } else if (user.role === 'parent') {
+    return []
   }
+
+  const attendanceRows = await Attendance.find(attendanceFilter).lean()
+
+  if (!attendanceRows.length) {
+    return []
+  }
+
+  const sessionIds = [...new Set(attendanceRows.map((row) => row.sessionId))]
+  const participantIds = [...new Set(attendanceRows.map((row) => row.participantId))]
+
+  const [scheduleRows, participantRows] = await Promise.all([
+    Schedule.find({ _id: { $in: sessionIds } }).lean(),
+    Participant.find({ _id: { $in: participantIds } }).lean(),
+  ])
+
+  const scheduleMap = new Map(scheduleRows.map((row) => [row._id, row]))
+  const participantMap = new Map(participantRows.map((row) => [row._id, row]))
+
+  const sortedRows = [...attendanceRows].sort((left, right) => {
+    const leftSchedule = scheduleMap.get(left.sessionId)
+    const rightSchedule = scheduleMap.get(right.sessionId)
+    const leftParticipant = participantMap.get(left.participantId)
+    const rightParticipant = participantMap.get(right.participantId)
+
+    const byDate =
+      new Date(leftSchedule?.dateTime ?? 0).getTime() -
+      new Date(rightSchedule?.dateTime ?? 0).getTime()
+
+    if (byDate !== 0) {
+      return byDate
+    }
+
+    return (leftParticipant?.name ?? '').localeCompare(
+      rightParticipant?.name ?? '',
+      'ru',
+    )
+  })
 
   const registerMap = new Map()
 
-  for (const row of rows) {
-    if (!registerMap.has(row.session_id)) {
-      registerMap.set(row.session_id, {
-        sessionId: row.session_id,
-        sectionId: row.section_id,
-        sectionName: row.section_name,
-        dateTime: row.date_time,
+  for (const row of sortedRows) {
+    const schedule = scheduleMap.get(row.sessionId)
+    const participant = participantMap.get(row.participantId)
+
+    if (!schedule || !participant) {
+      continue
+    }
+
+    if (!registerMap.has(row.sessionId)) {
+      registerMap.set(row.sessionId, {
+        sessionId: row.sessionId,
+        sectionId: schedule.sectionId,
+        sectionName: schedule.sectionName,
+        dateTime: schedule.dateTime,
         marks: [],
       })
     }
 
-    registerMap.get(row.session_id).marks.push({
-      participantId: row.participant_id,
+    registerMap.get(row.sessionId).marks.push({
+      participantId: row.participantId,
       status: row.status,
-      participantName: row.participant_name,
-      age: row.age,
-      parentName: row.parent_name,
+      participantName: participant.name,
+      age: participant.age,
+      parentName: participant.parentName,
     })
   }
 
   return Array.from(registerMap.values())
 }
 
-export function updateAttendance(user, sessionId, participantId, status) {
+export async function updateAttendance(user, sessionId, participantId, status) {
   if (!['admin', 'coach'].includes(user.role)) {
-    throw createError(403, 'Изменять посещаемость могут только администратор и тренер.')
+    throw createError(
+      403,
+      'Изменять посещаемость могут только администратор и тренер.',
+    )
   }
 
   if (!['present', 'late', 'absent'].includes(status)) {
     throw createError(400, 'Недопустимый статус посещаемости.')
   }
 
-  const sessionExists = db.prepare('SELECT id FROM schedule WHERE id = ?').get(sessionId)
+  const [sessionExists, participantExists] = await Promise.all([
+    Schedule.exists({ _id: sessionId }),
+    Participant.exists({ _id: participantId }),
+  ])
 
   if (!sessionExists) {
     throw createError(404, 'Тренировка для журнала не найдена.')
   }
 
-  const participantExists = db
-    .prepare('SELECT id FROM participants WHERE id = ?')
-    .get(participantId)
-
   if (!participantExists) {
     throw createError(404, 'Спортсмен не найден.')
   }
 
-  db.prepare(`
-    INSERT INTO attendance (session_id, participant_id, status)
-    VALUES (?, ?, ?)
-    ON CONFLICT(session_id, participant_id)
-    DO UPDATE SET status = excluded.status
-  `).run(sessionId, participantId, status)
+  await Attendance.findOneAndUpdate(
+    { sessionId, participantId },
+    { status },
+    {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true,
+    },
+  )
 
   return listAttendance(user)
 }
 
-export function listAchievements(user) {
-  const baseQuery = `
-    SELECT
-      ach.id,
-      ach.participant_id,
-      ach.title,
-      ach.details,
-      p.name AS participant_name,
-      p.level,
-      p.focus
-    FROM achievements ach
-    JOIN participants p ON p.id = ach.participant_id
-  `
-
-  let rows = []
+export async function listAchievements(user) {
+  let achievementFilter = {}
 
   if (user.role === 'athlete' && user.athleteId) {
-    rows = db
-      .prepare(`${baseQuery} WHERE ach.participant_id = ? ORDER BY p.name, ach.id`)
-      .all(user.athleteId)
-  } else if (user.role === 'parent' && user.managedAthletes.length) {
-    const placeholders = user.managedAthletes.map(() => '?').join(', ')
-    rows = db
-      .prepare(
-        `${baseQuery} WHERE ach.participant_id IN (${placeholders}) ORDER BY p.name, ach.id`,
-      )
-      .all(...user.managedAthletes)
-  } else {
-    rows = db.prepare(`${baseQuery} ORDER BY p.name, ach.id`).all()
+    achievementFilter = { participantId: user.athleteId }
+  } else if (user.role === 'athlete') {
+    return []
+  } else if (user.role === 'parent' && user.managedAthletes?.length) {
+    achievementFilter = { participantId: { $in: user.managedAthletes } }
+  } else if (user.role === 'parent') {
+    return []
   }
 
-  return rows.map((row) => ({
-    id: row.id,
-    participantId: row.participant_id,
-    title: row.title,
-    details: row.details,
-    participantName: row.participant_name,
-    level: row.level,
-    focus: row.focus,
-  }))
+  const rows = await Achievement.find(achievementFilter).sort({ _id: 1 }).lean()
+
+  if (!rows.length) {
+    return []
+  }
+
+  const participantIds = [...new Set(rows.map((row) => row.participantId))]
+  const participantRows = await Participant.find({
+    _id: { $in: participantIds },
+  }).lean()
+
+  const participantMap = new Map(participantRows.map((row) => [row._id, row]))
+
+  return rows
+    .map((row) => {
+      const participant = participantMap.get(row.participantId)
+
+      if (!participant) {
+        return null
+      }
+
+      return {
+        id: row._id,
+        participantId: row.participantId,
+        title: row.title,
+        details: row.details,
+        participantName: participant.name,
+        level: participant.level,
+        focus: participant.focus,
+      }
+    })
+    .filter(Boolean)
+    .sort((left, right) => {
+      const byName = left.participantName.localeCompare(right.participantName, 'ru')
+
+      if (byName !== 0) {
+        return byName
+      }
+
+      return left.id.localeCompare(right.id, 'ru')
+    })
 }
 
-export function getDashboardStats() {
+export async function getDashboardStats() {
   const todayKey = new Date().toISOString().slice(0, 10)
-  const sectionCount = db.prepare('SELECT COUNT(*) AS count FROM sections').get().count
-  const coachCount = db
-    .prepare('SELECT COUNT(DISTINCT coach) AS count FROM sections')
-    .get().count
-  const participantCount = db
-    .prepare('SELECT COUNT(*) AS count FROM participants')
-    .get().count
-  const trainingsToday = db
-    .prepare('SELECT COUNT(*) AS count FROM schedule WHERE substr(date_time, 1, 10) = ?')
-    .get(todayKey).count
+  const todayPattern = new RegExp(`^${todayKey}`)
 
-  const todaySessions = db
-    .prepare(`
-      SELECT id, section_name, coach, hall, date_time
-      FROM schedule
-      WHERE substr(date_time, 1, 10) = ?
-      ORDER BY date_time
-    `)
-    .all(todayKey)
+  const [sections, participantCount, todaySessions] = await Promise.all([
+    Section.find().sort({ name: 1 }).lean(),
+    Participant.countDocuments(),
+    Schedule.find({ dateTime: { $regex: todayPattern } })
+      .sort({ dateTime: 1 })
+      .lean(),
+  ])
 
-  const coachLoad = db
-    .prepare(`
-      SELECT coach, COUNT(*) AS sections_count
-      FROM sections
-      GROUP BY coach
-      ORDER BY coach
-    `)
-    .all()
+  const coachLoadMap = sections.reduce((accumulator, section) => {
+    return {
+      ...accumulator,
+      [section.coach]: (accumulator[section.coach] ?? 0) + 1,
+    }
+  }, {})
 
   return {
     stats: {
-      sectionCount,
-      coachCount,
+      sectionCount: sections.length,
+      coachCount: new Set(sections.map((section) => section.coach)).size,
       participantCount,
-      trainingsToday,
+      trainingsToday: todaySessions.length,
     },
     todaySessions: todaySessions.map((row) => ({
-      id: row.id,
-      sectionName: row.section_name,
+      id: row._id,
+      sectionName: row.sectionName,
       coach: row.coach,
       hall: row.hall,
-      dateTime: row.date_time,
+      dateTime: row.dateTime,
     })),
-    coachLoad: coachLoad.map((row) => ({
-      coach: row.coach,
-      sectionsCount: row.sections_count,
-    })),
+    coachLoad: Object.entries(coachLoadMap)
+      .sort(([leftCoach], [rightCoach]) => leftCoach.localeCompare(rightCoach, 'ru'))
+      .map(([coach, sectionsCount]) => ({
+        coach,
+        sectionsCount,
+      })),
   }
 }

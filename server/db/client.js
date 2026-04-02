@@ -1,16 +1,26 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import Database from 'better-sqlite3'
+import mongoose from 'mongoose'
 
-const currentDir = path.dirname(fileURLToPath(import.meta.url))
-const dataDir = path.join(currentDir, '..', 'data')
+const defaultDatabaseName = 'sportspace'
+const defaultMongoUri = `mongodb://127.0.0.1:27017/${defaultDatabaseName}`
 
-fs.mkdirSync(dataDir, { recursive: true })
+export async function connectToDatabase() {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection
+  }
 
-const databasePath = path.join(dataDir, 'sportspace.db')
+  const mongoUri = process.env.MONGODB_URI ?? defaultMongoUri
 
-export const db = new Database(databasePath)
+  await mongoose.connect(mongoUri, {
+    serverSelectionTimeoutMS: 5000,
+  })
 
-db.pragma('foreign_keys = ON')
-db.pragma('journal_mode = WAL')
+  return mongoose.connection
+}
+
+export async function disconnectFromDatabase() {
+  if (mongoose.connection.readyState === 0) {
+    return
+  }
+
+  await mongoose.disconnect()
+}

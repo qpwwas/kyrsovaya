@@ -4,8 +4,8 @@ import { listParticipants } from '../services/clubService.js'
 
 export const participantRouter = Router()
 
-participantRouter.get('/', authenticateRequest, (request, response) => {
+participantRouter.get('/', authenticateRequest, async (request, response) => {
   response.json({
-    participants: listParticipants(request.user),
+    participants: await listParticipants(request.user),
   })
 })
