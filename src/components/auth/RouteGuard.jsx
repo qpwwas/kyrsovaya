@@ -1,10 +1,11 @@
-import { Link, Outlet } from 'react-router-dom'
-import { StatusPill } from '../StatusPill'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAppState } from '../../context/useAppState'
 import { roleLabels } from '../../utils/format'
+import { StatusPill } from '../StatusPill'
 
 export function RouteGuard({ allowedRoles }) {
   const { currentRole, isAuthenticated, isBootstrapping } = useAppState()
+  const location = useLocation()
 
   if (isBootstrapping) {
     return (
@@ -36,8 +37,11 @@ export function RouteGuard({ allowedRoles }) {
         </div>
 
         <div className="actions-row">
-          <Link className="button" to="/">
-            Перейти на главную
+          <Link className="button" to="/login" state={{ from: location }}>
+            Войти
+          </Link>
+          <Link className="button-secondary" to="/register" state={{ from: location }}>
+            Регистрация
           </Link>
         </div>
       </section>

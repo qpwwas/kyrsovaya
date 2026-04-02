@@ -1,18 +1,32 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAppState } from '../../context/useAppState'
 import { roleLabels } from '../../utils/format'
 import { NotificationList } from '../NotificationList'
 import { StatCard } from '../StatCard'
 import { StatusPill } from '../StatusPill'
 
-const navItems = [
-  { to: '/', label: 'Главная' },
-  { to: '/sections', label: 'Секции' },
-  { to: '/schedule', label: 'Расписание' },
-  { to: '/attendance', label: 'Посещаемость' },
-  { to: '/achievements', label: 'Достижения' },
-  { to: '/admin', label: 'Админ-панель' },
-]
+function getNavItems(isAuthenticated, currentRole) {
+  const items = [
+    { to: '/', label: 'Главная' },
+    { to: '/sections', label: 'Секции' },
+    { to: '/schedule', label: 'Расписание' },
+  ]
+
+  if (isAuthenticated) {
+    items.push({ to: '/profile', label: 'Профиль' })
+    items.push({ to: '/attendance', label: 'Посещаемость' })
+    items.push({ to: '/achievements', label: 'Достижения' })
+
+    if (currentRole === 'admin') {
+      items.push({ to: '/admin', label: 'Админ-панель' })
+    }
+  } else {
+    items.push({ to: '/login', label: 'Вход' })
+    items.push({ to: '/register', label: 'Регистрация' })
+  }
+
+  return items
+}
 
 export function AppLayout() {
   const {
@@ -22,11 +36,11 @@ export function AppLayout() {
     isBootstrapping,
     isSyncingData,
     notifications,
-    roleOptions,
-    setRole,
     signOut,
     stats,
   } = useAppState()
+
+  const navItems = getNavItems(isAuthenticated, currentRole)
 
   return (
     <div className="app-shell">
@@ -37,21 +51,17 @@ export function AppLayout() {
               <span className="brand__eyebrow">Курсовой проект</span>
               <h1 className="brand__title">SportSpace Manager</h1>
               <p className="brand__subtitle">
-                Управление спортивными секциями, тренировками, залами и личными
-                кабинетами с реальными данными из backend API.
+                Система управления спортивными секциями, расписанием тренировок,
+                посещаемостью и личными кабинетами пользователей.
               </p>
             </div>
 
             <div className="topbar__controls">
-              <StatusPill tone={isAuthenticated ? 'success' : 'warning'}>
-                {isAuthenticated ? roleLabels[currentRole] : 'Гостевой режим'}
+              <StatusPill tone={isAuthenticated ? 'success' : 'neutral'}>
+                {isAuthenticated ? roleLabels[currentRole] : 'Публичный режим'}
               </StatusPill>
               <StatusPill tone={isSyncingData || isBootstrapping ? 'info' : 'neutral'}>
-                {isBootstrapping
-                  ? 'загрузка'
-                  : isSyncingData
-                    ? 'синхронизация'
-                    : 'готово'}
+                {isBootstrapping ? 'Загрузка' : isSyncingData ? 'Синхронизация' : 'Готово'}
               </StatusPill>
 
               {isAuthenticated ? (
@@ -59,20 +69,14 @@ export function AppLayout() {
                   Выйти
                 </button>
               ) : (
-                <div className="field role-switch">
-                  <label htmlFor="role-mode">Демо-режим</label>
-                  <select
-                    id="role-mode"
-                    value={currentRole}
-                    onChange={(event) => setRole(event.target.value)}
-                  >
-                    {roleOptions.map((role) => (
-                      <option key={role.value} value={role.value}>
-                        {role.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <>
+                  <Link className="button-secondary" to="/login">
+                    Вход
+                  </Link>
+                  <Link className="button" to="/register">
+                    Регистрация
+                  </Link>
+                </>
               )}
             </div>
           </div>
@@ -103,28 +107,39 @@ export function AppLayout() {
               <div className="sidebar-panel__header">
                 <div>
                   <h2 className="sidebar-panel__title">
-                    {isAuthenticated ? 'Активный профиль' : 'Гостевой режим'}
+                    {isAuthenticated ? 'Аккаунт' : 'Публичный доступ'}
                   </h2>
                   <p className="sidebar-panel__description">
-                    {isAuthenticated ? currentUser.fullName : roleLabels[currentRole]}
+                    {isAuthenticated
+                      ? currentUser.fullName
+                      : 'Каталог секций и расписание доступны без входа.'}
                   </p>
                 </div>
-                <StatusPill tone={isAuthenticated ? 'success' : 'warning'}>
-                  {isAuthenticated ? currentUser.position : 'Без авторизации'}
+                <StatusPill tone={isAuthenticated ? 'success' : 'neutral'}>
+                  {isAuthenticated ? currentUser.position : 'Гость'}
                 </StatusPill>
               </div>
 
               {isAuthenticated ? (
-                <ul className="mini-list">
-                  <li>{currentUser.email}</li>
-                  <li>{currentUser.phone}</li>
-                  <li>{currentUser.emergencyContact}</li>
-                </ul>
+                <div className="summary-list">
+                  <div className="summary-list__item">
+                    <span className="summary-list__label">E-mail</span>
+                    <span className="summary-list__value">{currentUser.email}</span>
+                  </div>
+                  <div className="summary-list__item">
+                    <span className="summary-list__label">Телефон</span>
+                    <span className="summary-list__value">{currentUser.phone}</span>
+                  </div>
+                  <div className="summary-list__item">
+                    <span className="summary-list__label">Экстренная связь</span>
+                    <span className="summary-list__value">{currentUser.emergencyContact}</span>
+                  </div>
+                </div>
               ) : (
                 <ul className="mini-list">
-                  <li>доступны публичные секции и расписание тренировок</li>
-                  <li>личные разделы открываются после входа или регистрации</li>
-                  <li>демо-роль можно переключить в верхней панели</li>
+                  <li>Отдельные страницы входа и регистрации вынесены из главной панели.</li>
+                  <li>Личные разделы открываются только после авторизации.</li>
+                  <li>Публичные секции и расписание доступны всем посетителям.</li>
                 </ul>
               )}
             </section>
@@ -132,9 +147,9 @@ export function AppLayout() {
             <section className="sidebar-panel">
               <div className="sidebar-panel__header">
                 <div>
-                  <h2 className="sidebar-panel__title">Быстрая статистика</h2>
+                  <h2 className="sidebar-panel__title">Ключевые показатели</h2>
                   <p className="sidebar-panel__description">
-                    Сводка по секциям, тренировкам и тренерскому составу
+                    Быстрая сводка по секциям, тренировкам и участникам.
                   </p>
                 </div>
               </div>
@@ -143,17 +158,17 @@ export function AppLayout() {
                 <StatCard
                   label="Тренировок сегодня"
                   value={stats.trainingsToday}
-                  hint="По текущему расписанию из API"
+                  hint="По текущему расписанию"
                 />
                 <StatCard
-                  label="Секций в системе"
+                  label="Секций"
                   value={stats.sectionCount}
-                  hint="Доступны для просмотра и записи"
+                  hint="Доступны в каталоге"
                 />
                 <StatCard
                   label="Тренеров"
                   value={stats.coachCount}
-                  hint="Учитываются по активным секциям"
+                  hint="Активные специалисты"
                 />
               </div>
             </section>
@@ -163,7 +178,7 @@ export function AppLayout() {
                 <div>
                   <h2 className="sidebar-panel__title">Уведомления</h2>
                   <p className="sidebar-panel__description">
-                    События интерфейса и результаты последних действий
+                    Последние изменения по расписанию, секциям и профилям.
                   </p>
                 </div>
               </div>
