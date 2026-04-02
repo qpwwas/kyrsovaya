@@ -1,3 +1,6 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import cors from 'cors'
 import express from 'express'
 import { errorHandler } from './middleware/errorHandler.js'
@@ -8,6 +11,15 @@ import { dashboardRouter } from './routes/dashboardRoutes.js'
 import { participantRouter } from './routes/participantRoutes.js'
 import { scheduleRouter } from './routes/scheduleRoutes.js'
 import { sectionRouter } from './routes/sectionRoutes.js'
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url))
+const projectRoot = path.join(currentDir, '..')
+const distDir = path.join(projectRoot, 'dist')
+const distIndexPath = path.join(distDir, 'index.html')
+
+function hasBuiltFrontend() {
+  return fs.existsSync(distIndexPath)
+}
 
 export function createApp() {
   const app = express()
@@ -35,6 +47,19 @@ export function createApp() {
       message: 'API маршрут не найден.',
     })
   })
+
+  if (hasBuiltFrontend()) {
+    app.use(express.static(distDir))
+
+    app.get('/{*splat}', (request, response, next) => {
+      if (request.path.startsWith('/api/')) {
+        next()
+        return
+      }
+
+      response.sendFile(distIndexPath)
+    })
+  }
 
   app.use(errorHandler)
 
