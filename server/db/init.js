@@ -21,6 +21,7 @@ async function seedDatabase() {
   const usersCount = await User.countDocuments()
 
   if (usersCount > 0) {
+    console.log('Database already seeded')
     return
   }
 
@@ -103,6 +104,8 @@ async function seedDatabase() {
     Attendance.insertMany(attendance),
     Achievement.insertMany(achievements),
   ])
+
+  console.log('Database seeded successfully')
 }
 
 export async function ensureDatabaseReady() {

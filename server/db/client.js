@@ -1,26 +1,24 @@
 import mongoose from 'mongoose'
 
-const defaultDatabaseName = 'sportspace'
-const defaultMongoUri = `mongodb://127.0.0.1:27017/${defaultDatabaseName}`
+let isConnected = false
 
 export async function connectToDatabase() {
-  if (mongoose.connection.readyState === 1) {
+  const mongoUri = process.env.MONGO_URI
+
+  if (!mongoUri) {
+    throw new Error('MONGO_URI is not set in environment variables')
+  }
+
+  if (isConnected) {
     return mongoose.connection
   }
 
-  const mongoUri = process.env.MONGODB_URI ?? defaultMongoUri
-
   await mongoose.connect(mongoUri, {
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
   })
 
+  isConnected = true
+  console.log('MongoDB connected')
+
   return mongoose.connection
-}
-
-export async function disconnectFromDatabase() {
-  if (mongoose.connection.readyState === 0) {
-    return
-  }
-
-  await mongoose.disconnect()
 }
