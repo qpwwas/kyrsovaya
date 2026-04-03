@@ -33,14 +33,33 @@ function createRegistrationForm(role = 'athlete') {
   }
 }
 
+function getEmailError(email) {
+  const normalizedEmail = email.trim()
+
+  if (!normalizedEmail) {
+    return 'Укажите e-mail.'
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return 'Введите корректный e-mail, например name@example.com.'
+  }
+
+  return ''
+}
+
 export function RegistrationFormCard({ authFeedback, isSyncingData, onSuccess, registerUser }) {
   const [registrationForm, setRegistrationForm] = useState(createRegistrationForm())
+  const [emailError, setEmailError] = useState('')
 
   function updateField(field, value) {
     setRegistrationForm((previous) => ({
       ...previous,
       [field]: value,
     }))
+
+    if (field === 'email' && emailError) {
+      setEmailError(getEmailError(value))
+    }
   }
 
   function handleRoleChange(nextRole) {
@@ -57,6 +76,14 @@ export function RegistrationFormCard({ authFeedback, isSyncingData, onSuccess, r
 
   async function handleSubmit(event) {
     event.preventDefault()
+
+    const nextEmailError = getEmailError(registrationForm.email)
+    setEmailError(nextEmailError)
+
+    if (nextEmailError) {
+      return
+    }
+
     const result = await registerUser(registrationForm)
 
     if (result?.ok) {
@@ -75,7 +102,7 @@ export function RegistrationFormCard({ authFeedback, isSyncingData, onSuccess, r
         </div>
       </div>
 
-      <form className="form-grid" onSubmit={handleSubmit}>
+      <form className="form-grid" onSubmit={handleSubmit} noValidate>
         <div className={`alert alert--${authFeedback.type}`}>{authFeedback.message}</div>
 
         <div className="field">
@@ -92,10 +119,7 @@ export function RegistrationFormCard({ authFeedback, isSyncingData, onSuccess, r
             ))}
           </select>
           <span className="inline-note">
-            {
-              registrationRoleOptions.find((role) => role.value === registrationForm.role)
-                ?.summary
-            }
+            {registrationRoleOptions.find((role) => role.value === registrationForm.role)?.summary}
           </span>
         </div>
 
@@ -115,8 +139,12 @@ export function RegistrationFormCard({ authFeedback, isSyncingData, onSuccess, r
               id="register-email"
               type="email"
               value={registrationForm.email}
+              autoComplete="email"
+              aria-invalid={Boolean(emailError)}
               onChange={(event) => updateField('email', event.target.value)}
+              onBlur={() => setEmailError(getEmailError(registrationForm.email))}
             />
+            {emailError ? <span className="field__error">{emailError}</span> : null}
           </div>
         </div>
 
@@ -135,6 +163,7 @@ export function RegistrationFormCard({ authFeedback, isSyncingData, onSuccess, r
             <input
               id="register-password"
               type="password"
+              autoComplete="new-password"
               value={registrationForm.password}
               onChange={(event) => updateField('password', event.target.value)}
             />

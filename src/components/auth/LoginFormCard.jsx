@@ -1,5 +1,19 @@
 import { useState } from 'react'
 
+function getEmailError(email) {
+  const normalizedEmail = email.trim()
+
+  if (!normalizedEmail) {
+    return 'Укажите e-mail.'
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return 'Введите корректный e-mail, например name@example.com.'
+  }
+
+  return ''
+}
+
 export function LoginFormCard({
   authFeedback,
   currentRole,
@@ -15,9 +29,29 @@ export function LoginFormCard({
     email: '',
     password: '',
   })
+  const [emailError, setEmailError] = useState('')
+
+  function handleEmailChange(value) {
+    setLoginForm((previous) => ({
+      ...previous,
+      email: value,
+    }))
+
+    if (emailError) {
+      setEmailError(getEmailError(value))
+    }
+  }
 
   async function handleLoginSubmit(event) {
     event.preventDefault()
+
+    const nextEmailError = getEmailError(loginForm.email)
+    setEmailError(nextEmailError)
+
+    if (nextEmailError) {
+      return
+    }
+
     const result = await signIn(loginForm)
 
     if (result?.ok) {
@@ -29,6 +63,7 @@ export function LoginFormCard({
     const profile = profiles[role]
 
     setRole?.(role)
+    setEmailError('')
     setLoginForm({
       role,
       email: profile.email,
@@ -47,7 +82,7 @@ export function LoginFormCard({
         </div>
       </div>
 
-      <form className="form-grid" onSubmit={handleLoginSubmit}>
+      <form className="form-grid" onSubmit={handleLoginSubmit} noValidate>
         <div className={`alert alert--${authFeedback.type}`}>{authFeedback.message}</div>
 
         <div className="form-grid form-grid--two">
@@ -80,13 +115,12 @@ export function LoginFormCard({
               type="email"
               value={loginForm.email}
               placeholder="user@sport.local"
-              onChange={(event) =>
-                setLoginForm((previous) => ({
-                  ...previous,
-                  email: event.target.value,
-                }))
-              }
+              autoComplete="email"
+              aria-invalid={Boolean(emailError)}
+              onChange={(event) => handleEmailChange(event.target.value)}
+              onBlur={() => setEmailError(getEmailError(loginForm.email))}
             />
+            {emailError ? <span className="field__error">{emailError}</span> : null}
           </div>
         </div>
 
@@ -97,6 +131,7 @@ export function LoginFormCard({
             type="password"
             value={loginForm.password}
             placeholder="Не менее 6 символов"
+            autoComplete="current-password"
             onChange={(event) =>
               setLoginForm((previous) => ({
                 ...previous,
