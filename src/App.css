@@ -801,6 +801,16 @@
   transition: all 200ms var(--ease-out);
 }
 
+.field select {
+  color-scheme: dark;
+}
+
+.field select option,
+.field select optgroup {
+  background: #08110d;
+  color: var(--ink);
+}
+
 .field textarea {
   min-height: 120px;
   resize: vertical;
