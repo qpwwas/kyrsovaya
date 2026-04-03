@@ -3,10 +3,10 @@ import mongoose from 'mongoose'
 let isConnected = false
 
 export async function connectToDatabase() {
-  const mongoUri = process.env.MONGO_URI
+  const mongoUri = process.env.MONGO_URI ?? process.env.MONGODB_URI
 
   if (!mongoUri) {
-    throw new Error('MONGO_URI is not set in environment variables')
+    throw new Error('MongoDB URI is not set. Use MONGO_URI or MONGODB_URI.')
   }
 
   if (isConnected) {
@@ -14,7 +14,9 @@ export async function connectToDatabase() {
   }
 
   await mongoose.connect(mongoUri, {
-    serverSelectionTimeoutMS: 10000,
+    serverSelectionTimeoutMS: 30000,
+    connectTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
   })
 
   isConnected = true

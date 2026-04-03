@@ -16,7 +16,7 @@ npm install
 PORT=3001
 HOST=0.0.0.0
 JWT_SECRET=change-me-in-production
-MONGODB_URI=mongodb://127.0.0.1:27017/sportspace
+MONGO_URI=mongodb://127.0.0.1:27017/sportspace
 ```
 
 4. Собрать frontend:
@@ -44,7 +44,7 @@ npm start
 ### Что нужно задать в окружении
 
 - `JWT_SECRET`
-- `MONGODB_URI`
+- `MONGO_URI`
 
 ### Что важно
 
@@ -60,7 +60,7 @@ Render поднимет Node.js сервис, но сам MongoDB не созд�
 
 - build: `npm install && npm run build`
 - start: `npm start`
-- env: `JWT_SECRET`, `MONGODB_URI`
+- env: `JWT_SECRET`, `MONGO_URI`
 
 ## Проверка после деплоя
 
