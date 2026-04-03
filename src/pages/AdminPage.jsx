@@ -1,4 +1,5 @@
 import { PageHeader } from '../components/PageHeader'
+import { Reveal } from '../components/Reveal'
 import { StatCard } from '../components/StatCard'
 import { StatusPill } from '../components/StatusPill'
 import { useAppState } from '../context/useAppState'
@@ -26,8 +27,13 @@ export function AdminPage() {
     <>
       <PageHeader
         eyebrow="Административная панель"
-        title="Общая статистика по секциям, тренерам и участникам"
-        description="В одном месте собрана операционная информация для руководителя: тренировки на день, загрузка секций, список тренеров и текущее количество участников."
+        title={
+          <>
+            Управление
+            <span className="accent-text"> SportSpace</span>
+          </>
+        }
+        description="Операционная информация для руководителя: тренировки, загрузка секций, список тренеров и статистика участников."
         action={
           <StatusPill tone={currentRole === 'admin' ? 'success' : 'warning'}>
             {currentRole === 'admin' ? 'Полный доступ' : 'Режим просмотра'}
@@ -35,59 +41,64 @@ export function AdminPage() {
         }
       />
 
-      <section className="stats-grid">
+      <Reveal className="stats-grid" delay={0}>
         <StatCard
           label="Тренировок на день"
           value={stats.trainingsToday}
-          hint="активные слоты на текущую дату"
+          hint="Активные слоты сегодня"
         />
         <StatCard
           label="Секций"
           value={stats.sectionCount}
-          hint="направления доступны в каталоге"
+          hint="Направлений в каталоге"
         />
         <StatCard
           label="Тренеров"
           value={stats.coachCount}
-          hint="задействованы в расписании"
+          hint="В расписании"
         />
         <StatCard
           label="Участников"
           value={stats.participantCount}
-          hint="спортсмены в группах и секциях"
+          hint="Спортсменов в секциях"
         />
-      </section>
+      </Reveal>
 
       <div className="page-grid page-grid--two">
-        <section className="card">
+        <Reveal className="card" delay={50}>
           <div className="card__header">
             <div>
-              <h2 className="card__title">Тренировки на сегодня</h2>
+              <h2 className="card__title">Тренировки сегодня</h2>
               <p className="card__description">
-                Контроль дневной загрузки спортивного комплекса.
+                Дневная загрузка спортивного комплекса.
               </p>
             </div>
+            <StatusPill tone="info">{todaySessions.length} занятий</StatusPill>
           </div>
 
-          <div className="timeline">
-            {todaySessions.map((session) => (
-              <article key={session.id} className="timeline__item">
-                <strong>{session.sectionName}</strong>
-                <span className="inline-note">{formatDateTime(session.dateTime)}</span>
-                <span className="inline-note">
-                  {session.coach} · {session.hall}
-                </span>
-              </article>
-            ))}
-          </div>
-        </section>
+          {todaySessions.length > 0 ? (
+            <div className="timeline">
+              {todaySessions.map((session) => (
+                <article key={session.id} className="timeline__item">
+                  <strong>{session.sectionName}</strong>
+                  <span className="inline-note">{formatDateTime(session.dateTime)}</span>
+                  <span className="inline-note">
+                    {session.coach} / {session.hall}
+                  </span>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">На сегодня тренировок не запланировано</div>
+          )}
+        </Reveal>
 
-        <section className="card">
+        <Reveal className="card" delay={100}>
           <div className="card__header">
             <div>
               <h2 className="card__title">Секции и наполняемость</h2>
               <p className="card__description">
-                Количество участников и свободных мест по каждому направлению.
+                Количество участников и свободных мест.
               </p>
             </div>
           </div>
@@ -114,11 +125,11 @@ export function AdminPage() {
               </tbody>
             </table>
           </div>
-        </section>
+        </Reveal>
       </div>
 
       <div className="page-grid page-grid--two">
-        <section className="card">
+        <Reveal className="card" delay={150}>
           <div className="card__header">
             <div>
               <h2 className="card__title">Тренерский состав</h2>
@@ -136,14 +147,14 @@ export function AdminPage() {
               </article>
             ))}
           </div>
-        </section>
+        </Reveal>
 
-        <section className="card">
+        <Reveal className="card" delay={200}>
           <div className="card__header">
             <div>
               <h2 className="card__title">Участники системы</h2>
               <p className="card__description">
-                Список спортсменов с возрастом и фокусом подготовки.
+                Спортсмены с возрастом и фокусом подготовки.
               </p>
             </div>
           </div>
@@ -170,7 +181,7 @@ export function AdminPage() {
               </tbody>
             </table>
           </div>
-        </section>
+        </Reveal>
       </div>
     </>
   )

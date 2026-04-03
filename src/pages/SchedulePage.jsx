@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { PageHeader } from '../components/PageHeader'
+import { Reveal } from '../components/Reveal'
 import { ScheduleCard } from '../components/ScheduleCard'
 import { StatusPill } from '../components/StatusPill'
 import { useAppState } from '../context/useAppState'
@@ -20,8 +21,7 @@ function ScheduleEditorCard({
   })
   const [scheduleFeedback, setScheduleFeedback] = useState({
     type: 'info',
-    message:
-      'При переносе тренировки система проверяет занятость залов и тренеров в выбранный слот.',
+    message: 'При переносе тренировки система проверяет занятость залов и тренеров.',
   })
 
   function handleSubmit(event) {
@@ -38,12 +38,14 @@ function ScheduleEditorCard({
     <section className="card">
       <div className="card__header">
         <div>
-          <h2 className="card__title">Перенос тренировки</h2>
+          <h2 className="card__title">Редактирование расписания</h2>
           <p className="card__description">
-            Форма предотвращает конфликт по залу и по тренеру на одно и то же
-            время.
+            Перенос тренировки с автоматической проверкой конфликтов.
           </p>
         </div>
+        <StatusPill tone={['admin', 'coach'].includes(currentRole) ? 'success' : 'warning'}>
+          {['admin', 'coach'].includes(currentRole) ? 'Доступно' : 'Только просмотр'}
+        </StatusPill>
       </div>
 
       <form className="form-grid" onSubmit={handleSubmit}>
@@ -52,7 +54,7 @@ function ScheduleEditorCard({
         </div>
 
         <div className="field">
-          <label htmlFor="session-id">Тренировка</label>
+          <label htmlFor="session-id">Выберите тренировку</label>
           <select
             id="session-id"
             value={selectedSessionId}
@@ -60,63 +62,65 @@ function ScheduleEditorCard({
           >
             {schedule.map((session) => (
               <option key={session.id} value={session.id}>
-                {session.sectionName} · {formatDateTime(session.dateTime)}
+                {session.sectionName} / {formatDateTime(session.dateTime)}
               </option>
             ))}
           </select>
         </div>
 
-        <div className="field">
-          <label htmlFor="session-date">Новая дата и время</label>
-          <input
-            id="session-date"
-            type="datetime-local"
-            value={formState.dateTime}
-            onChange={(event) =>
-              setFormState((previous) => ({
-                ...previous,
-                dateTime: event.target.value,
-              }))
-            }
-          />
-        </div>
+        <div className="form-grid form-grid--two">
+          <div className="field">
+            <label htmlFor="session-date">Новая дата и время</label>
+            <input
+              id="session-date"
+              type="datetime-local"
+              value={formState.dateTime}
+              onChange={(event) =>
+                setFormState((previous) => ({
+                  ...previous,
+                  dateTime: event.target.value,
+                }))
+              }
+            />
+          </div>
 
-        <div className="field">
-          <label htmlFor="session-hall">Зал</label>
-          <select
-            id="session-hall"
-            value={formState.hall}
-            onChange={(event) =>
-              setFormState((previous) => ({
-                ...previous,
-                hall: event.target.value,
-              }))
-            }
-          >
-            {halls.map((hall) => (
-              <option key={hall} value={hall}>
-                {hall}
-              </option>
-            ))}
-          </select>
+          <div className="field">
+            <label htmlFor="session-hall">Зал</label>
+            <select
+              id="session-hall"
+              value={formState.hall}
+              onChange={(event) =>
+                setFormState((previous) => ({
+                  ...previous,
+                  hall: event.target.value,
+                }))
+              }
+            >
+              {halls.map((hall) => (
+                <option key={hall} value={hall}>
+                  {hall}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="actions-row">
-          <button className="button" type="submit">
-            Сохранить расписание
+          <button
+            className="button"
+            type="submit"
+            disabled={!['admin', 'coach'].includes(currentRole)}
+          >
+            Сохранить изменения
           </button>
-          <StatusPill tone={['admin', 'coach'].includes(currentRole) ? 'success' : 'warning'}>
-            {['admin', 'coach'].includes(currentRole) ? 'Можно редактировать' : 'Нет прав'}
-          </StatusPill>
         </div>
 
         {selectedSession ? (
-          <div className="meta-box">
-            <span className="meta-box__label">Выбранный слот</span>
+          <div className="meta-box" style={{ marginTop: 8 }}>
+            <span className="meta-box__label">Текущие данные</span>
             <span className="meta-box__value">{selectedSession.sectionName}</span>
-            <p className="inline-note" style={{ marginTop: 8 }}>
-              Текущий тренер: {selectedSession.coach}. Текущий зал:{' '}
-              {selectedSession.hall}.
+            <p className="inline-note">
+              Тренер: {selectedSession.coach} / Зал: {selectedSession.hall}
             </p>
           </div>
         ) : null}
@@ -144,30 +148,34 @@ export function SchedulePage() {
     <>
       <PageHeader
         eyebrow="Планирование тренировок"
-        title="Формирование и изменение расписания"
-        description="Раздел помогает контролировать занятость залов и тренеров, а также своевременно уведомлять пользователей об изменениях."
+        title={
+          <>
+            Расписание занятий
+            <span className="accent-text"> и управление слотами</span>
+          </>
+        }
+        description="Контроль занятости залов, тренеров и групп. Возможность переноса тренировок с автоматической проверкой конфликтов."
         action={
           <StatusPill tone={['admin', 'coach'].includes(currentRole) ? 'success' : 'warning'}>
             {['admin', 'coach'].includes(currentRole)
               ? 'Редактирование доступно'
-              : 'Только просмотр'}
+              : 'Режим просмотра'}
           </StatusPill>
         }
       />
 
       <div className="split-content">
-        <section className="card">
+        <Reveal className="card" delay={0}>
           <div className="card__header">
             <div>
-              <h2 className="card__title">Журнал расписания</h2>
+              <h2 className="card__title">Журнал тренировок</h2>
               <p className="card__description">
-                Слоты отсортированы по дате и содержат данные о тренере, зале и
-                загрузке группы.
+                Список занятий с информацией о загрузке групп и тренерах.
               </p>
             </div>
           </div>
 
-          <div className="field" style={{ marginBottom: 16 }}>
+          <div className="field" style={{ marginBottom: 20 }}>
             <label htmlFor="hall-filter">Фильтр по залу</label>
             <select
               id="hall-filter"
@@ -184,31 +192,34 @@ export function SchedulePage() {
           </div>
 
           <div className="schedule-list">
-            {filteredSchedule.map((session) => {
+            {filteredSchedule.map((session, index) => {
               const section = sectionsById[session.sectionId]
 
               return (
-                <ScheduleCard
-                  key={session.id}
-                  session={session}
-                  participantsCount={section.participantIds.length}
-                  capacity={section.capacity}
-                />
+                <Reveal key={session.id} delay={30 + index * 20}>
+                  <ScheduleCard
+                    session={session}
+                    participantsCount={section.participantIds.length}
+                    capacity={section.capacity}
+                  />
+                </Reveal>
               )
             })}
           </div>
-        </section>
+        </Reveal>
 
-        <ScheduleEditorCard
-          key={activeSessionId}
-          currentRole={currentRole}
-          halls={halls}
-          rescheduleSession={rescheduleSession}
-          schedule={schedule}
-          selectedSession={selectedSession}
-          selectedSessionId={activeSessionId}
-          setSelectedSessionId={setSelectedSessionId}
-        />
+        <Reveal delay={100}>
+          <ScheduleEditorCard
+            key={activeSessionId}
+            currentRole={currentRole}
+            halls={halls}
+            rescheduleSession={rescheduleSession}
+            schedule={schedule}
+            selectedSession={selectedSession}
+            selectedSessionId={activeSessionId}
+            setSelectedSessionId={setSelectedSessionId}
+          />
+        </Reveal>
       </div>
     </>
   )

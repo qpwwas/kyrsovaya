@@ -13,42 +13,42 @@ const sportCards = [
     subtitle: 'Junior Pro',
     status: 'Открыт набор',
     tone: 'success',
-    meta: '18 мест · Игровой зал',
+    meta: '18 мест / Игровой зал',
   },
   {
     title: 'Плавание',
     subtitle: 'Sprint Team',
     status: 'Почти заполнено',
     tone: 'warning',
-    meta: '16 мест · Бассейн 1',
+    meta: '16 мест / Бассейн 1',
   },
   {
     title: 'Баскетбол',
     subtitle: 'U16 Core',
     status: 'Открыт набор',
     tone: 'success',
-    meta: '20 мест · Игровой зал',
+    meta: '20 мест / Игровой зал',
   },
   {
     title: 'Гимнастика',
     subtitle: 'Flex Kids',
     status: 'Последние места',
     tone: 'info',
-    meta: '12 мест · Малый зал',
+    meta: '12 мест / Малый зал',
   },
   {
     title: 'Тхэквондо',
     subtitle: 'Start Group',
     status: 'Открыт набор',
     tone: 'success',
-    meta: '14 мест · Зал единоборств',
+    meta: '14 мест / Зал единоборств',
   },
   {
     title: 'Лёгкая атлетика',
     subtitle: 'Track Lab',
     status: 'Набор скоро',
     tone: 'neutral',
-    meta: 'Новый поток · Стадион',
+    meta: 'Новый поток / Стадион',
   },
 ]
 
@@ -66,12 +66,7 @@ const scheduleTabs = [
     key: 'tue',
     label: 'Вт',
     items: [
-      {
-        time: '16:30',
-        section: 'Тхэквондо Start',
-        hall: 'Зал единоборств',
-        coach: 'Д. Сейтханов',
-      },
+      { time: '16:30', section: 'Тхэквондо Start', hall: 'Зал единоборств', coach: 'Д. Сейтханов' },
       { time: '18:00', section: 'Баскетбол U16', hall: 'Игровой зал', coach: 'Р. Гусев' },
       { time: '19:30', section: 'Плавание Sprint', hall: 'Бассейн 1', coach: 'И. Лапина' },
     ],
@@ -91,12 +86,7 @@ const scheduleTabs = [
     items: [
       { time: '16:00', section: 'Плавание PRO', hall: 'Бассейн 1', coach: 'И. Лапина' },
       { time: '18:00', section: 'Баскетбол U16', hall: 'Игровой зал', coach: 'Р. Гусев' },
-      {
-        time: '19:30',
-        section: 'Тхэквондо Start',
-        hall: 'Зал единоборств',
-        coach: 'Д. Сейтханов',
-      },
+      { time: '19:30', section: 'Тхэквондо Start', hall: 'Зал единоборств', coach: 'Д. Сейтханов' },
     ],
   },
   {
@@ -114,12 +104,7 @@ const scheduleTabs = [
     items: [
       { time: '10:00', section: 'Плавание Sprint', hall: 'Бассейн 1', coach: 'И. Лапина' },
       { time: '11:30', section: 'Баскетбол U16', hall: 'Игровой зал', coach: 'Р. Гусев' },
-      {
-        time: '13:00',
-        section: 'Тхэквондо Start',
-        hall: 'Зал единоборств',
-        coach: 'Д. Сейтханов',
-      },
+      { time: '13:00', section: 'Тхэквондо Start', hall: 'Зал единоборств', coach: 'Д. Сейтханов' },
     ],
   },
 ]
@@ -163,12 +148,13 @@ function AnimatedCounter({ value, suffix = '' }) {
     }
 
     let frameId = 0
-    const duration = 900
+    const duration = 1200
     const startedAt = performance.now()
 
     function tick(now) {
       const progress = Math.min((now - startedAt) / duration, 1)
-      setDisplayValue(Math.round(value * progress))
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setDisplayValue(Math.round(value * eased))
 
       if (progress < 1) {
         frameId = window.requestAnimationFrame(tick)
@@ -225,16 +211,21 @@ export function HomePage() {
   return (
     <>
       <PageHeader
-        eyebrow="Тёмный лендинг"
-        title="Система управления спортивными секциями и расписанием тренировок"
-        description="Главная страница теперь построена отдельными экранами-блоками, чтобы каждый раздел читался отдельно, а не шёл плотным рядом."
+        eyebrow="SportSpace Manager"
+        title={
+          <>
+            Управление спортивными секциями
+            <span className="accent-text"> нового поколения</span>
+          </>
+        }
+        description="Единая платформа для организации тренировок, контроля посещаемости и отслеживания достижений спортсменов."
         action={
           <div className="actions-row">
             <Link className="button-secondary" to="/sections">
               Смотреть секции
             </Link>
             <Link className="button" to={isAuthenticated ? '/profile' : '/register'}>
-              {isAuthenticated ? 'Открыть кабинет' : 'Начать сейчас'}
+              {isAuthenticated ? 'Личный кабинет' : 'Начать сейчас'}
             </Link>
           </div>
         }
@@ -244,18 +235,16 @@ export function HomePage() {
         <Reveal className="landing-hero" delay={0}>
           <div className="landing-hero__content">
             <StatusPill tone={isAuthenticated ? 'success' : 'neutral'}>
-              {isAuthenticated ? `Роль: ${roleLabels[currentRole]}` : 'Гостевой просмотр'}
+              {isAuthenticated ? `${roleLabels[currentRole]}` : 'Гостевой режим'}
             </StatusPill>
 
             <h2 className="landing-hero__title">
-              Тёмный минимализм для спортивной платформы с акцентом на данные, ритм и
-              быстрый доступ к действиям.
+              Современная система для спортивных клубов и секций
             </h2>
 
             <p className="landing-hero__description">
-              Интерфейс объединяет секции, расписание, достижения, посещаемость и
-              административный обзор. Главная теперь работает как цельная витрина, а не
-              как несколько карточек, поставленных в один ряд.
+              Интерфейс объединяет управление секциями, расписание тренировок, учет посещаемости
+              и достижения спортсменов в единую экосистему.
             </p>
 
             <div className="landing-hero__actions">
@@ -263,7 +252,7 @@ export function HomePage() {
                 {isAuthenticated ? 'Открыть расписание' : 'Войти в систему'}
               </Link>
               <Link className="button-secondary" to="/admin">
-                Превью дашборда
+                Панель управления
               </Link>
             </div>
           </div>
@@ -280,7 +269,7 @@ export function HomePage() {
           </div>
         </Reveal>
 
-        <Reveal className="stats-strip" delay={80}>
+        <Reveal className="stats-strip" delay={100}>
           {showcaseStats.map((item) => (
             <article key={item.label} className="stats-strip__item">
               <span className="stats-strip__label">{item.label}</span>
@@ -291,11 +280,11 @@ export function HomePage() {
           ))}
         </Reveal>
 
-        <Reveal className="landing-section card showcase-card" delay={120}>
+        <Reveal className="landing-section card showcase-card" delay={150}>
           <SectionLead
             eyebrow="Секции"
-            title="Карточки направлений отдельно от остальных блоков"
-            description="Блок секций вынесен в самостоятельный экран, поэтому он воспринимается как отдельный раздел, а не часть общего ряда."
+            title="Спортивные направления для всех возрастов"
+            description="Выберите подходящую секцию из каталога и запишите спортсмена прямо через интерфейс платформы."
           />
 
           <div className="sport-grid">
@@ -308,20 +297,25 @@ export function HomePage() {
                   </div>
                   <StatusPill tone={item.tone}>{item.status}</StatusPill>
                 </div>
-
                 <div className="sport-card__footer">
                   <span>{item.meta}</span>
                 </div>
               </article>
             ))}
           </div>
+
+          <div className="actions-row">
+            <Link className="button" to="/sections">
+              Перейти в каталог секций
+            </Link>
+          </div>
         </Reveal>
 
-        <Reveal className="landing-section card showcase-card" delay={180}>
+        <Reveal className="landing-section card showcase-card" delay={200}>
           <SectionLead
             eyebrow="Расписание"
-            title="Отдельный блок с переключением по дням недели"
-            description="Таблица расписания теперь живёт в своем собственном разделе и не конкурирует по ширине с другими карточками."
+            title="Планирование тренировок по дням недели"
+            description="Просматривайте расписание занятий, контролируйте загрузку залов и тренеров."
           />
 
           <div className="week-tabs">
@@ -359,13 +353,19 @@ export function HomePage() {
               </tbody>
             </table>
           </div>
+
+          <div className="actions-row">
+            <Link className="button-secondary" to="/schedule">
+              Полное расписание
+            </Link>
+          </div>
         </Reveal>
 
-        <Reveal className="landing-section card showcase-card" delay={220}>
+        <Reveal className="landing-section card showcase-card" delay={250}>
           <SectionLead
             eyebrow="Достижения"
-            title="Карточки наград и метрик в отдельной секции"
-            description="Блок достижений отделен от расписания и панели управления, поэтому страница выглядит более разложенной по смыслу."
+            title="Результаты и прогресс спортсменов"
+            description="Отслеживайте награды, статистику посещаемости и рост показателей воспитанников."
           />
 
           <div className="achievement-cards">
@@ -379,18 +379,24 @@ export function HomePage() {
               </article>
             ))}
           </div>
+
+          <div className="actions-row">
+            <Link className="button-secondary" to="/achievements">
+              Все достижения
+            </Link>
+          </div>
         </Reveal>
 
-        <Reveal className="landing-section card showcase-card" delay={280}>
+        <Reveal className="landing-section card showcase-card" delay={300}>
           <SectionLead
-            eyebrow="Дашборд"
-            title="Самостоятельное превью панели управления"
-            description="Вместо тесной компоновки рядом с достижениями, дашборд вынесен ниже в отдельный цельный блок."
+            eyebrow="Панель управления"
+            title="Административный контроль в реальном времени"
+            description="Мониторинг посещаемости, управление секциями и быстрый доступ к ключевой статистике."
           />
 
           <div className="dashboard-preview">
             <aside className="dashboard-preview__sidebar">
-              <span className="dashboard-preview__sidebar-title">Панель</span>
+              <span className="dashboard-preview__sidebar-title">Меню</span>
               <div className="dashboard-preview__menu">
                 {dashboardMenu.map((item, index) => (
                   <span
@@ -414,7 +420,7 @@ export function HomePage() {
                   <strong>06</strong>
                 </div>
                 <div className="dashboard-preview__stat">
-                  <span>Новых уведомлений</span>
+                  <span>Уведомлений</span>
                   <strong>04</strong>
                 </div>
               </div>
@@ -439,14 +445,20 @@ export function HomePage() {
               </table>
             </div>
           </div>
+
+          <div className="actions-row">
+            <Link className="button" to="/admin">
+              Открыть панель управления
+            </Link>
+          </div>
         </Reveal>
 
         {!isAuthenticated ? (
-          <Reveal className="landing-section card showcase-card" delay={320}>
+          <Reveal className="landing-section card showcase-card" delay={350}>
             <SectionLead
-              eyebrow="Вход"
-              title="Отдельная карточка авторизации"
-              description="Форма входа вынесена в самостоятельную секцию, чтобы завершать страницу отдельным действием, а не стоять бок о бок с другими блоками."
+              eyebrow="Авторизация"
+              title="Войдите в систему для полного доступа"
+              description="После входа откроются персональные разделы: профиль, достижения, посещаемость и управление."
             />
 
             <LoginFormCard
@@ -461,19 +473,19 @@ export function HomePage() {
             />
           </Reveal>
         ) : (
-          <Reveal className="landing-section card showcase-card" delay={320}>
+          <Reveal className="landing-section card showcase-card" delay={350}>
             <SectionLead
-              eyebrow="Аккаунт"
-              title="Активная сессия пользователя"
-              description="Когда пользователь уже вошёл в систему, нижний блок показывает состояние сессии отдельным экраном."
+              eyebrow="Профиль"
+              title="Добро пожаловать в систему"
+              description="Вы авторизованы и имеете доступ ко всем разделам платформы согласно вашей роли."
             />
 
-            <div className="card showcase-card showcase-card--inner">
+            <div className="card showcase-card--inner">
               <div className="card__header">
                 <div>
                   <h2 className="card__title">Активная сессия</h2>
                   <p className="card__description">
-                    Вы уже вошли в систему и можете продолжить работу из личного кабинета.
+                    Продолжите работу в личном кабинете или перейдите к нужному разделу.
                   </p>
                 </div>
                 <StatusPill tone="success">{roleLabels[currentRole]}</StatusPill>
@@ -489,28 +501,28 @@ export function HomePage() {
                   <span className="summary-list__value">{currentUser.email}</span>
                 </div>
                 <div className="summary-list__item">
-                  <span className="summary-list__label">Доступ</span>
+                  <span className="summary-list__label">Должность</span>
                   <span className="summary-list__value">{currentUser.position}</span>
                 </div>
               </div>
 
               <div className="landing-hero__actions">
                 <Link className="button" to="/profile">
-                  Перейти в профиль
+                  Личный кабинет
                 </Link>
                 <Link className="button-secondary" to="/schedule">
-                  Открыть расписание
+                  Расписание
                 </Link>
               </div>
             </div>
           </Reveal>
         )}
 
-        <Reveal className="landing-section card showcase-card" delay={380}>
+        <Reveal className="landing-section card showcase-card" delay={400}>
           <SectionLead
             eyebrow="Роли"
-            title="Роли тоже вынесены в отдельный финальный блок"
-            description="Последняя секция завершает страницу отдельным обзором сценариев для администратора, тренера, спортсмена и родителя."
+            title="Система разграничения доступа"
+            description="Каждая роль открывает определенный набор возможностей и разделов платформы."
           />
 
           <div className="role-pill-grid">
@@ -526,10 +538,10 @@ export function HomePage() {
 
           <div className="landing-hero__actions">
             <Link className="button-secondary" to="/sections">
-              Перейти к секциям
+              Каталог секций
             </Link>
             <Link className="button" to={isAuthenticated ? '/profile' : '/register'}>
-              {isAuthenticated ? 'Мой кабинет' : 'Создать аккаунт'}
+              {isAuthenticated ? 'Личный кабинет' : 'Создать аккаунт'}
             </Link>
           </div>
         </Reveal>

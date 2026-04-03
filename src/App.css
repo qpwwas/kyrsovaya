@@ -801,14 +801,56 @@
   transition: all 200ms var(--ease-out);
 }
 
-.field select {
+.field select,
+select {
+  color: var(--ink);
+  background: #08110d;
   color-scheme: dark;
 }
 
 .field select option,
-.field select optgroup {
+.field select optgroup,
+select option,
+select optgroup {
   background: #08110d;
+  color: #f4f8f6;
+}
+
+.field input[type='date'],
+.field input[type='datetime-local'],
+.field input[type='time'],
+.field input[type='month'],
+input[type='date'],
+input[type='datetime-local'],
+input[type='time'],
+input[type='month'] {
   color: var(--ink);
+  background: #08110d;
+  color-scheme: dark;
+}
+
+.field input[type='date']::-webkit-calendar-picker-indicator,
+.field input[type='datetime-local']::-webkit-calendar-picker-indicator,
+.field input[type='time']::-webkit-calendar-picker-indicator,
+.field input[type='month']::-webkit-calendar-picker-indicator,
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='month']::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.95);
+  opacity: 0.88;
+  cursor: pointer;
+}
+
+.field input[type='date']::-webkit-calendar-picker-indicator:hover,
+.field input[type='datetime-local']::-webkit-calendar-picker-indicator:hover,
+.field input[type='time']::-webkit-calendar-picker-indicator:hover,
+.field input[type='month']::-webkit-calendar-picker-indicator:hover,
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover,
+input[type='month']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
 }
 
 .field textarea {

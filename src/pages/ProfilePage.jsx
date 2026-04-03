@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ProfileFormCard } from '../components/auth/ProfileFormCard'
 import { PageHeader } from '../components/PageHeader'
+import { Reveal } from '../components/Reveal'
 import { StatCard } from '../components/StatCard'
 import { StatusPill } from '../components/StatusPill'
 import { useAppState } from '../context/useAppState'
@@ -11,12 +12,12 @@ function getRoleActions(currentRole) {
     {
       to: '/sections',
       title: 'Каталог секций',
-      description: 'Просмотр доступных направлений, тренеров и свободных мест.',
+      description: 'Просмотр направлений, тренеров и свободных мест.',
     },
     {
       to: '/schedule',
       title: 'Расписание',
-      description: 'Проверка ближайших тренировок и изменений по залам.',
+      description: 'Ближайшие тренировки и изменения по залам.',
     },
   ]
 
@@ -25,13 +26,13 @@ function getRoleActions(currentRole) {
       ...commonActions,
       {
         to: '/admin',
-        title: 'Админ-панель',
-        description: 'Общая статистика, секции, тренеры и участники.',
+        title: 'Панель управления',
+        description: 'Статистика, секции, тренеры и участники.',
       },
       {
         to: '/attendance',
         title: 'Посещаемость',
-        description: 'Контроль журналов и статусов по тренировкам.',
+        description: 'Журналы и статусы по тренировкам.',
       },
     ]
   }
@@ -42,12 +43,12 @@ function getRoleActions(currentRole) {
       {
         to: '/attendance',
         title: 'Журнал посещаемости',
-        description: 'Отметка присутствия и работа с участниками групп.',
+        description: 'Отметка присутствия и работа с группами.',
       },
       {
         to: '/achievements',
         title: 'Достижения',
-        description: 'Просмотр результатов спортсменов и прогресса.',
+        description: 'Результаты и прогресс спортсменов.',
       },
     ]
   }
@@ -57,12 +58,12 @@ function getRoleActions(currentRole) {
     {
       to: '/attendance',
       title: 'Моя посещаемость',
-      description: 'Личный журнал и история присутствия на тренировках.',
+      description: 'Личный журнал и история присутствия.',
     },
     {
       to: '/achievements',
       title: 'Мои достижения',
-      description: 'Результаты, награды и спортивный прогресс.',
+      description: 'Результаты, награды и прогресс.',
     },
   ]
 }
@@ -89,25 +90,32 @@ export function ProfilePage() {
     <>
       <PageHeader
         eyebrow="Личный кабинет"
-        title="Профиль пользователя"
-        description="Отдельная страница профиля помогает держать личные данные отдельно от главной панели и делает сценарий работы заметно чище."
+        title={
+          <>
+            Профиль
+            <span className="accent-text"> пользователя</span>
+          </>
+        }
+        description="Управление личными данными, контактной информацией и быстрый доступ к основным разделам платформы."
       />
 
       <div className="page-grid page-grid--two">
-        <ProfileFormCard
-          key={`${currentUser.email}-${currentUser.fullName}-${currentUser.phone}`}
-          currentUser={currentUser}
-          isSyncingData={isSyncingData}
-          profileFeedback={profileFeedback}
-          updateProfile={updateProfile}
-        />
+        <Reveal delay={0}>
+          <ProfileFormCard
+            key={`${currentUser.email}-${currentUser.fullName}-${currentUser.phone}`}
+            currentUser={currentUser}
+            isSyncingData={isSyncingData}
+            profileFeedback={profileFeedback}
+            updateProfile={updateProfile}
+          />
+        </Reveal>
 
-        <section className="card">
+        <Reveal className="card" delay={50}>
           <div className="card__header">
             <div>
-              <h2 className="card__title">Сводка по аккаунту</h2>
+              <h2 className="card__title">Информация об аккаунте</h2>
               <p className="card__description">
-                Ключевая информация о текущей роли и доступных возможностях.
+                Текущая роль и доступные возможности в системе.
               </p>
             </div>
             <StatusPill tone="success">{roleLabels[currentRole]}</StatusPill>
@@ -130,12 +138,12 @@ export function ProfilePage() {
               <span className="summary-list__label">Экстренная связь</span>
               <span className="summary-list__value">{currentUser.emergencyContact}</span>
             </div>
-            {managedNames.length ? (
+            {managedNames.length > 0 && (
               <div className="summary-list__item">
                 <span className="summary-list__label">Привязанные спортсмены</span>
                 <span className="summary-list__value">{managedNames.join(', ')}</span>
               </div>
-            ) : null}
+            )}
           </div>
 
           <div className="divider" />
@@ -148,14 +156,14 @@ export function ProfilePage() {
               </Link>
             ))}
           </div>
-        </section>
+        </Reveal>
       </div>
 
-      <div className="stats-grid">
+      <Reveal className="stats-grid" delay={100}>
         <StatCard
           label="Секций"
           value={stats.sectionCount}
-          hint="Доступны в системе для просмотра и записи"
+          hint="Доступны для просмотра и записи"
         />
         <StatCard
           label="Тренировок сегодня"
@@ -165,14 +173,14 @@ export function ProfilePage() {
         <StatCard
           label="Участников"
           value={stats.participantCount}
-          hint="Общее число спортсменов в базе"
+          hint="Общее число спортсменов"
         />
         <StatCard
           label="Тренеров"
           value={stats.coachCount}
-          hint="Активные тренеры спортивных секций"
+          hint="Активные тренеры секций"
         />
-      </div>
+      </Reveal>
     </>
   )
 }

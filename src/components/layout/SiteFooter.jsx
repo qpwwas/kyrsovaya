@@ -1,15 +1,20 @@
 import { Link } from 'react-router-dom'
 
 export function SiteFooter() {
+  const currentYear = new Date().getFullYear()
+
   return (
     <footer className="site-footer">
       <div className="site-footer__grid">
         <div className="site-footer__brand">
           <span className="site-footer__eyebrow">SportSpace Manager</span>
           <p className="site-footer__copy">
-            Курсовой проект по управлению спортивными секциями, расписанием тренировок
-            и личными кабинетами пользователей.
+            Современная платформа для управления спортивными секциями, расписанием тренировок
+            и отслеживания достижений спортсменов.
           </p>
+          <span className="inline-note" style={{ marginTop: 8 }}>
+            {currentYear} SportSpace. Все права защищены.
+          </span>
         </div>
 
         <div className="site-footer__links">
@@ -17,20 +22,15 @@ export function SiteFooter() {
           <Link to="/">Главная</Link>
           <Link to="/sections">Секции</Link>
           <Link to="/schedule">Расписание</Link>
-          <Link to="/login">Вход</Link>
+          <Link to="/achievements">Достижения</Link>
         </div>
 
         <div className="site-footer__links">
-          <span className="site-footer__title">Соцсети</span>
-          <a href="https://github.com/qpwwas/kyrsovaya" target="_blank" rel="noreferrer">
-            GitHub
-          </a>
-          <a href="https://t.me" target="_blank" rel="noreferrer">
-            Telegram
-          </a>
-          <a href="https://vk.com" target="_blank" rel="noreferrer">
-            VK
-          </a>
+          <span className="site-footer__title">Аккаунт</span>
+          <Link to="/login">Вход</Link>
+          <Link to="/register">Регистрация</Link>
+          <Link to="/profile">Профиль</Link>
+          <Link to="/admin">Панель управления</Link>
         </div>
       </div>
     </footer>
